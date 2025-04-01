@@ -1,0 +1,6 @@
+[workspace]
+members = ["crates/debugger-cli", "crates/debugger-core"]
+resolver = "2"
+
+[workspace.dependencies]
+log = "0.4"

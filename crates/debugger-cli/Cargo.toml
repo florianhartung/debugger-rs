@@ -1,0 +1,13 @@
+[package]
+name = "debugger-cli"
+version = "0.1.0"
+edition = "2024"
+authors = ["Florian Hartung <florian.hartung5@gmail.com>", "Marek Freunscht <freunscht58@outlook.de>"]
+
+[dependencies]
+debugger-core = { path = "../debugger-core" }
+log.workspace = true
+env_logger = "0.11"
+envconfig = "0.11"
+dotenvy = "0.15"
+anyhow = "1"

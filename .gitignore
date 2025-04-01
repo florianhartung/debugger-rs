@@ -1,0 +1,8 @@
+# Nix shell environement
+.direnv/
+
+# No pdfs
+**.pdf
+
+# Rust outputs
+target/
