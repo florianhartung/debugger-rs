@@ -3,7 +3,7 @@
 #let td = text(red)[TODO]
 
 #show: setup.with(
-  title: "Development of a minimal x86-64 Unix debugger in Rust",
+  title: "Development of a minimal x86-64 Unix debugger\n in Rust",
   authors: (("Florian Hartung", 6622800), ("Marek Freunscht", 9604914))
 )
 

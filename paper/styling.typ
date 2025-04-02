@@ -1,6 +1,6 @@
 #let key_value_table(..key_value_pairs) = [
   #let cells = key_value_pairs.pos().map(elem => ([#elem.at(0):#h(5mm)], elem.at(1))).flatten()
-  #grid(columns: (auto, auto), gutter: 0.8em, ..cells)
+  #grid(columns: (auto, auto), gutter: 0.3em, ..cells)
 ]
 
 
@@ -22,12 +22,14 @@
   )[
     #grid(columns: (1fr, auto), align: (left, right),
       align(horizon, key_value_table(
+        ([Studiengang Kurs], [TINF22IT1]),
         ([Vorlesung], [Moderne Konzepte der Informatik]),
         ([Betreuer], [Bauer, Johannes, Prof. Dr.-Ing.]),
         ([Abgabedatum], [#text(red)[TODO]]),
       )),
       image("images/dhbw_icon.png", height: 4em)
     )
+    #v(2em)
     #align(center, text(size: 20pt, weight: "bold", title))
     #authors.map(((name, nr)) => [#name (#nr)]).intersperse([,#h(0.5em)]).join()
 
