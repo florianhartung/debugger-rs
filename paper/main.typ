@@ -5,14 +5,21 @@
   authors: (("Florian Hartung", 6622800), ("Marek Freunscht", 9604914))
 )
 
-= Foo
+// TODO Abstract?
+
+= Introduction
+#lorem(100)
+
+#lorem(100)
+
+#lorem(100)
+
+= Debuggers
+
 #lorem(200)
 
-== Bar
+= Implementation
 #lorem(200)
 
-= Baz
-#lorem(200)
-
-== Foobar
+= Conclusion
 #lorem(200)

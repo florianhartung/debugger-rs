@@ -7,7 +7,7 @@
 #let setup(title: [PLACEHOLDER], authors: (("PLACEHOLDER", 123456), ("PLACEHOLDER", 123456)), content) = [
   #set text(size: 11pt, font: "TeX Gyre Termes", lang: "en")
   #set page(paper: "a4", margin: 25mm, columns: 2)
-  #set par(justify: true)
+  #set par(justify: true, first-line-indent: 1.5em, leading: 0.65em, spacing: 0.85em)
 
   #place(
     top + center,
