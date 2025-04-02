@@ -13,6 +13,7 @@
     footer: align(center, context counter(page).display("1 / 1", both: true))
   )
   #set par(justify: true, first-line-indent: 1.5em, leading: 0.65em, spacing: 0.85em)
+  #set heading(numbering: "1.1")
 
   #place(
     top + center,
