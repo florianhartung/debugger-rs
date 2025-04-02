@@ -19,7 +19,8 @@ Other debuggers may require the use of specific programming languages, such as l
 // Goal
 In this work, we present the bare minimum required to implement a debugger for low-level programs that compile to machine code.
 We limit our debugger to Unix and Unix-like systems out of personal preference and the x86-64 architecture because of its widespread use.
-Our debugger is required to implement a certain amount of base features we identify as necessary for a minimum viable product.
+Also we choose Rust as the programming language for our debugger, due to its advantages regarding memory safety and modern approach to software.
+The debugger is required to implement a certain amount of base features we identify as necessary for a minimum viable product.
 
 // Structure overview
 First, we present important fundamentals such as the lifecycle of a process in Unix/Unix-like systems.
