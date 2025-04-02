@@ -1,6 +1,6 @@
 #let key_value_table(..key_value_pairs) = [
   #let cells = key_value_pairs.pos().map(elem => ([#elem.at(0):#h(5mm)], elem.at(1))).flatten()
-  #grid(columns: (auto, auto), gutter: 1.25em, ..cells)
+  #grid(columns: (auto, auto), gutter: 0.8em, ..cells)
 ]
 
 
