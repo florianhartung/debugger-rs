@@ -1,0 +1,6 @@
+foo:
+  type: web
+  title: Foobar
+  url:
+    value: https://www.example.com
+    date: 2025-04-02

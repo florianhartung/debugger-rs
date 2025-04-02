@@ -8,14 +8,11 @@
 // TODO Abstract?
 
 = Introduction
-#lorem(100)
-
-#lorem(100)
+We can cite! @foo
 
 #lorem(100)
 
 = Debuggers
-
 #lorem(200)
 
 = Implementation
@@ -23,3 +20,6 @@
 
 = Conclusion
 #lorem(200)
+
+
+#bibliography("/bib.yml", style: "institute-of-electrical-and-electronics-engineers")
