@@ -1,5 +1,6 @@
 [workspace]
 members = ["crates/debugger-cli", "crates/debugger-core"]
+exclude = ["sample-programs/"]
 resolver = "2"
 
 [workspace.dependencies]

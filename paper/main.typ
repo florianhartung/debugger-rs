@@ -80,4 +80,4 @@ The next section presents our debugger with its initial requirements, developmen
 #td
 
 
-#bibliography("/bib.yml", style: "institute-of-electrical-and-electronics-engineers")
+#bibliography("./bib.yml", style: "institute-of-electrical-and-electronics-engineers")

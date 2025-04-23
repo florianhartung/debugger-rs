@@ -55,7 +55,7 @@
       {
         packages.debugger-rs-paper = inputs.typix.lib.${system}.buildTypstProject {
           name = "debugger-rs-paper.pdf";
-          src = ./work/main.typ;
+          src = ./paper/main.typ;
           XDG_CACHE_HOME = typstPackagesCache;
         };
 
@@ -77,6 +77,7 @@
 
             typst
             tinymist
+            gdb
           ];
         
           commands = [
@@ -86,13 +87,6 @@
                 typst watch --root "$PRJ_ROOT/paper" "$PRJ_ROOT/paper/main.typ"
               '';
               help = "watch and recompile the typst paper";
-            }
-            {
-              name = "watch-app";
-              command = ''
-                cargo watch --workdir ./application
-              '';
-              help = "watch and recompile the main application";
             }
           ];
         });
