@@ -27,7 +27,6 @@ First, we present important fundamentals such as the lifecycle of a process in U
 Then we explore the workings and techniques used by popular debuggers through specific examples.
 The next section presents our debugger with its initial requirements, development process and application in a test scenario.
 
-
 = Fundamentals
 #td
 
@@ -36,7 +35,15 @@ The next section presents our debugger with its initial requirements, developmen
 
 == Debuggers
 // TODO present commands such as gdb's `break` and then present what happens internally
-#td
+- What does a debugger do on an abstract level [gdb manpage]
+- Interactions with operating systems
+- Features of debuggers
+  - Breakpoints 
+  - Instruction stepping
+  - Register + memory access/modification
+  - Relating symbols to source code
+
+// == Symbols
 
 = Developing the debugger
 #td
@@ -50,11 +57,16 @@ The next section presents our debugger with its initial requirements, developmen
 ...#td
 
 == Design
-// TODO we split the project into a core debugger and a CLI
-#td
+- We split the project into a core debugger and a CLI
+  - CLI design 
+  - Core design
+    - Debugger loop
+    - Signal interception
+- What are hardware debug registers
+- What does ptrace do/how does it work
 
 == Implementation
-#td
+- PTRACE_ATTACH vs fork + PTRACE_TRACEME
 
 === Attaching to processes
 #td
