@@ -62,7 +62,7 @@ The next section presents our debugger with its initial requirements, developmen
   - Core design
     - Debugger loop
     - Signal
-- Hardware debug registers vs. ptrace
+- Hardware debug registers vs. ptrace@ptrace
   - Hardware debug registers: method for debugging that required kernel privileges
   - ptrace on a high level: a syscall for monitoring other processes
 - We choose (ptrace/hardware registers/both?) for our debugger design

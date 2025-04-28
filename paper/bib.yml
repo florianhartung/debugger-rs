@@ -4,3 +4,32 @@ timdbg:
   url:
     value: https://www.timdbg.com/posts/writing-a-debugger-from-scratch-part-1/
     date: 2025-04-02
+gdb:
+  type: web
+  title: gdb(1) - Linux man page
+  url:
+    value: https://www.man7.org/linux/man-pages/man1/gdb.1.html
+    date: 2025-04-28
+
+lldb:
+  type: web
+  title: The LLDB Debugger
+  url:
+    value: https://lldb.llvm.org/
+    date: 2025-04-28
+
+ptrace:
+  type: web
+  title: ptrace(2) - Linux man page
+  url:
+    value: https://www.man7.org/linux/man-pages/man2/ptrace.2.html
+    date: 2025-04-28
+
+# Could be interesting
+hardware-breakpoint-usage-in-linux-kernel:
+  type: web
+  title: Hardware Breakpoint (or watchpoint) usage in Linux Kernel
+  author: "Krishnan, Prasad"
+  url:
+    value: https://www.kernel.org/doc/ols/2009/ols2009-pages-149-158.pdf
+    date: 2025-04-28
