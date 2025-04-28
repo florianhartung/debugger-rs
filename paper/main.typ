@@ -57,13 +57,15 @@ The next section presents our debugger with its initial requirements, developmen
 ...#td
 
 == Design
-- We split the project into a core debugger and a CLI
-  - CLI design 
+- We split the project into a core debugger and a CLI for modularity and ease of development
+  - CLI design
   - Core design
     - Debugger loop
-    - Signal interception
-- What are hardware debug registers
-- What does ptrace do/how does it work
+    - Signal
+- Hardware debug registers vs. ptrace
+  - Hardware debug registers: method for debugging that required kernel privileges
+  - ptrace on a high level: a syscall for monitoring other processes
+- We choose (ptrace/hardware registers/both?) for our debugger design
 
 == Implementation
 - PTRACE_ATTACH vs fork + PTRACE_TRACEME
@@ -73,11 +75,9 @@ The next section presents our debugger with its initial requirements, developmen
 
 === Setting breakpoints
 #td
+// Probably requires hardware debug register to be efficient?
 
 === Reading memory & registers
-#td
-
-== Verification & validation
 #td
 
 == Using the debugger
