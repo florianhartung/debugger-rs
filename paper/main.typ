@@ -68,17 +68,19 @@ The next section presents our debugger with its initial requirements, developmen
 - We choose (ptrace/hardware registers/both?) for our debugger design
 
 == Implementation
-- PTRACE_ATTACH vs fork + PTRACE_TRACEME
+#td
 
 === Attaching to processes
-#td
+- PTRACE_ATTACH vs fork + PTRACE_TRACEME
 
 === Setting breakpoints
-#td
-// Probably requires hardware debug register to be efficient?
+- PTRACE_POKETEXT (Writing int3 into program flow) or hardware debug registers
 
 === Reading memory & registers
-#td
+- PTRACE_PEEKTEXT & PTRACE_GETREGS
+
+=== Instruction Stepping
+- PTRACE_SINGLESTEP
 
 == Using the debugger
 #td
