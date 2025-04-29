@@ -35,5 +35,46 @@
 
   ]
 
+  // Copied and adapted from https://github.com/typst/templates/blob/main/charged-ieee/lib.typ
+  #show heading: it => {
+    // Find out the final number of the heading counter.
+    let levels = counter(heading).get()
+    let deepest = if levels != () {
+      levels.last()
+    } else {
+      1
+    }
+
+    if it.level == 1 {
+      // First-level headings are centered smallcaps.
+      set align(center)
+      show: block.with(above: 13pt, below: 12.75pt, sticky: true)
+      show: smallcaps
+      set text(size: 11pt)
+      if it.numbering != none {
+        numbering("I.", deepest)
+        h(7pt, weak: true)
+      }
+      it.body
+    } else if it.level == 2 {
+      // Second-level headings are run-ins.
+      set par(first-line-indent: 0pt)
+      set text(size: 11pt, style: "italic", weight: "regular")
+      show: block.with(spacing: 10pt, sticky: true)
+      if it.numbering != none {
+        numbering("A.", deepest)
+        h(7pt, weak: true)
+      }
+      it.body
+    } else [
+      // Third level headings are run-ins too, but different.
+      #if it.level == 3 {
+        numbering("a)", deepest)
+        [ ]
+      }
+      _#(it.body):_
+    ]
+  }
+
   #content
 ]

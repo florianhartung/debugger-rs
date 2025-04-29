@@ -45,10 +45,8 @@ The next section presents our debugger with its initial requirements, developmen
 
 // == Symbols
 
-= Developing the debugger
-#td
 
-== Requirements
+= Requirements
 // TODO: Unix & Unix-like systems
 // TODO: x86-64 architecture
 1. attaching to processes
@@ -56,7 +54,7 @@ The next section presents our debugger with its initial requirements, developmen
 3. reading data from memory, the stack and registers.
 ...#td
 
-== Design
+= Design
 - We split the project into a core debugger and a CLI for modularity and ease of development
   - CLI design
   - Core design
@@ -68,24 +66,24 @@ The next section presents our debugger with its initial requirements, developmen
 - Using Hardware debug registers through ptrace
 - We choose ptrace for our debugger design
 
-== Implementation
+= Implementation
 #td
 
-=== Attaching to processes
+== Attaching to processes
 - PTRACE_ATTACH vs fork + PTRACE_TRACEME
 
-=== Setting breakpoints
+== Setting breakpoints
 - Software vs hardware breakpoints
   - PTRACE_POKETEXT (Writing int3 into program flow) or hardware debug registers
   - One or both?
 
-=== Reading memory & registers
+== Reading memory & registers
 - PTRACE_PEEKTEXT, PTRACE_POKEDATA & PTRACE_GETREGS
 
-=== Instruction Stepping
+== Instruction Stepping
 - PTRACE_SINGLESTEP
 
-== Using the debugger
+= Debugger Usage
 - Show 2-3 example programs and the commands used to interact with the debugger
 
 = Conclusion
