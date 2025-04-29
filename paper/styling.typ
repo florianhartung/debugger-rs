@@ -8,7 +8,7 @@
   #set text(size: 11pt, font: "TeX Gyre Termes", lang: "en")
   #set page(
     paper: "a4",
-    margin: 25mm,
+    margin: ("top": 25mm, "left": 20mm, "right": 20mm, "bottom": 25mm),
     columns: 2,
     footer: align(center, context counter(page).display("1 / 1", both: true))
   )
