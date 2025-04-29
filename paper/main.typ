@@ -62,10 +62,11 @@ The next section presents our debugger with its initial requirements, developmen
   - Core design
     - Debugger loop
     - Signal
-- Hardware debug registers vs. ptrace@ptrace
+- Hardware debug registers 
   - Hardware debug registers: method for debugging that required kernel privileges
-  - ptrace on a high level: a syscall for monitoring other processes
-- We choose (ptrace/hardware registers/both?) for our debugger design
+- ptrace on a high level: a syscall for monitoring other processes
+- Using Hardware debug registers through ptrace
+- We choose ptrace for our debugger design
 
 == Implementation
 #td
@@ -74,16 +75,18 @@ The next section presents our debugger with its initial requirements, developmen
 - PTRACE_ATTACH vs fork + PTRACE_TRACEME
 
 === Setting breakpoints
-- PTRACE_POKETEXT (Writing int3 into program flow) or hardware debug registers
+- Software vs hardware breakpoints
+  - PTRACE_POKETEXT (Writing int3 into program flow) or hardware debug registers
+  - One or both?
 
 === Reading memory & registers
-- PTRACE_PEEKTEXT & PTRACE_GETREGS
+- PTRACE_PEEKTEXT, PTRACE_POKEDATA & PTRACE_GETREGS
 
 === Instruction Stepping
 - PTRACE_SINGLESTEP
 
 == Using the debugger
-#td
+- Show 2-3 example programs and the commands used to interact with the debugger
 
 = Conclusion
 #td
