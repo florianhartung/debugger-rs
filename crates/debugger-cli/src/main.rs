@@ -1,9 +1,9 @@
 use std::path::PathBuf;
 
 use clap::Parser;
-use debugger_core::add;
+use debugger_core::{ContinueExecutionOutcome, Debugger};
 use envconfig::Envconfig;
-use log::{LevelFilter, info};
+use log::{LevelFilter, error, info};
 
 #[derive(Envconfig)]
 struct Config {
@@ -26,9 +26,21 @@ fn main() -> anyhow::Result<()> {
 
     let args = Args::parse();
 
-    info!("TODO: open {:?} now", args.executable_path);
+    let mut debugger = Debugger::new_with_forked_child(args.executable_path).unwrap();
 
-    info!("1 + 2 = {}", add(1, 2));
+    for _ in 0..10 {
+        info!("Continuing execution...");
+        match debugger.continue_execution() {
+            Ok(ContinueExecutionOutcome::ProcessExited(code)) => {
+                info!("Process exited with code {code}");
+                break;
+            }
+            Ok(ContinueExecutionOutcome::Other) => {}
+            Err(err) => {
+                error!("Error: {err}");
+            }
+        }
+    }
 
     Ok(())
 }
