@@ -1,6 +1,6 @@
-use std::{path::PathBuf, process::ExitCode};
+use std::path::PathBuf;
 
-use log::{debug, error, info, trace};
+use log::{debug, error, info};
 use nix::{
     sys::{signal::Signal, wait::WaitStatus},
     unistd::{ForkResult, Pid},
