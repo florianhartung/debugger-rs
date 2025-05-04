@@ -9,5 +9,5 @@ authors = [
 
 [dependencies]
 log.workspace = true
-nix = { version = "0.30", features = ["ptrace", "process"] }
+nix = { version = "0.30", features = ["ptrace", "process", "fs"] }
 thiserror = "2"

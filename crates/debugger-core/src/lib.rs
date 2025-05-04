@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use log::{debug, error, info};
 use nix::{
-    sys::{signal::Signal, wait::WaitStatus},
+    sys::{ptrace, signal::Signal, wait::WaitStatus},
     unistd::{ForkResult, Pid},
 };
 
@@ -14,6 +14,8 @@ pub enum Error {
     ChildAttachment,
     #[error("failed to continue execution of child process")]
     ContinueExecution,
+    #[error("failed get executable path of pid {0}")]
+    ReadExecutablePath(Pid),
 }
 
 type Result<T> = std::result::Result<T, Error>;
@@ -77,6 +79,36 @@ impl Debugger {
             "Successfully attached debugger to child process with pid {}",
             debugger.tracee_pid
         );
+
+        Ok(debugger)
+    }
+
+    pub fn new_with_existing_process(pid: nix::libc::pid_t) -> Result<Self> {
+        debug!("Attaching debugger to running process with pid {pid}");
+
+        let pid = Pid::from_raw(pid);
+
+        if let nix::Result::Err(errno) = ptrace::attach(pid) {
+            error!("Failed to attach debugger to process ({errno})");
+
+            return Err(Error::ChildAttachment);
+        }
+
+        let proc_exe_path = PathBuf::from(format!("/proc/{}/exe", pid));
+        let executable_path = nix::fcntl::readlink(&proc_exe_path)
+            .map_err(|_| {
+                error!("Could not get executable path from pid {pid}");
+
+                Error::ReadExecutablePath(pid)
+            })?
+            .into();
+
+        let debugger = Self {
+            executable_path,
+            tracee_pid: pid,
+        };
+
+        info!("Successfully attached debugger to running process with pid {pid}");
 
         Ok(debugger)
     }
