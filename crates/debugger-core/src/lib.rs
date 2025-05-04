@@ -21,7 +21,7 @@ type Result<T> = std::result::Result<T, Error>;
 #[derive(Debug)]
 pub struct Debugger {
     executable_path: PathBuf,
-    child_pid: Pid,
+    tracee_pid: Pid,
 }
 
 pub enum ContinueExecutionOutcome {
@@ -70,25 +70,25 @@ impl Debugger {
 
         let debugger = Self {
             executable_path,
-            child_pid,
+            tracee_pid: child_pid,
         };
 
         info!(
             "Successfully attached debugger to child process with pid {}",
-            debugger.child_pid
+            debugger.tracee_pid
         );
 
         Ok(debugger)
     }
 
     pub fn continue_execution(&mut self) -> Result<ContinueExecutionOutcome> {
-        nix::sys::ptrace::cont(self.child_pid, None).map_err(|errno| {
+        nix::sys::ptrace::cont(self.tracee_pid, None).map_err(|errno| {
             error!("failed ptrace cont call: {errno}");
 
             Error::ContinueExecution
         })?;
 
-        let wait_status = nix::sys::wait::waitpid(self.child_pid, None).map_err(|errno| {
+        let wait_status = nix::sys::wait::waitpid(self.tracee_pid, None).map_err(|errno| {
             error!("failed waitpid after continuing execution: {errno}");
 
             Error::ContinueExecution
