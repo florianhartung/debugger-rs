@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{collections::HashMap, path::PathBuf};
 
 use log::{debug, error, info};
 use nix::{
@@ -6,7 +6,10 @@ use nix::{
     unistd::{ForkResult, Pid},
 };
 
+use memory_map::ProcMemoryMaps;
+
 mod libc_wrappers;
+mod memory_map;
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
@@ -14,8 +17,20 @@ pub enum Error {
     ChildAttachment,
     #[error("failed to continue execution of child process")]
     ContinueExecution,
+    #[error("failed to read child memory at address 0x{0:8x}")]
+    ReadMemory(u64),
+    #[error("failed to write child memory at address 0x{0:8x}")]
+    WriteMemory(u64),
+    #[error("failed to read registers of tracee")]
+    ReadRegisters,
+    #[error("failed to write registers of tracee")]
+    WriteRegisters,
+    #[error("A breakpoint at address 0x{0:8x} already exists")]
+    BreakpointExists(u64),
     #[error("failed get executable path of pid {0}")]
     ReadExecutablePath(Pid),
+    #[error("an io error occured")]
+    IoError(#[from] std::io::Error),
 }
 
 type Result<T> = std::result::Result<T, Error>;
@@ -24,6 +39,8 @@ type Result<T> = std::result::Result<T, Error>;
 pub struct Debugger {
     executable_path: PathBuf,
     tracee_pid: Pid,
+    memory_maps: ProcMemoryMaps,
+    breakpoints: HashMap<u64, i64>,
 }
 
 pub enum ContinueExecutionOutcome {
@@ -70,9 +87,13 @@ impl Debugger {
             }
         }
 
+        let memory_maps = ProcMemoryMaps::from_pid(child_pid)?;
+
         let debugger = Self {
             executable_path,
             tracee_pid: child_pid,
+            memory_maps,
+            breakpoints: HashMap::new(),
         };
 
         info!(
@@ -103,9 +124,13 @@ impl Debugger {
             })?
             .into();
 
+        let memory_maps = ProcMemoryMaps::from_pid(pid)?;
+
         let debugger = Self {
             executable_path,
             tracee_pid: pid,
+            memory_maps,
+            breakpoints: HashMap::new(),
         };
 
         info!("Successfully attached debugger to running process with pid {pid}");
@@ -113,21 +138,122 @@ impl Debugger {
         Ok(debugger)
     }
 
+    fn set_breakpoint_at(&mut self, breakpoint_address: u64) -> Result<()> {
+        let breakpoint_address_ptr = breakpoint_address as *mut core::ffi::c_void;
+
+        let replaced_word =
+            ptrace::read(self.tracee_pid, breakpoint_address_ptr).map_err(|errno| {
+                error!("Could not read from address 0x{breakpoint_address:8x?}: {errno}");
+
+                Error::ReadMemory(breakpoint_address)
+            })?;
+
+        let breakpoint_word = (replaced_word & (!0xFFi64)) | 0xCCi64;
+        ptrace::write(self.tracee_pid, breakpoint_address_ptr, breakpoint_word).map_err(
+            |errno| {
+                error!("Could not write to address 0x{breakpoint_address:8x?}: {errno}");
+
+                Error::WriteMemory(breakpoint_address)
+            },
+        )?;
+
+        self.breakpoints.insert(breakpoint_address, replaced_word);
+
+        info!("Set breakpoint at {breakpoint_address:08x}");
+
+        Ok(())
+    }
+
+    pub fn set_breakpoint_at_text_offset(&mut self, text_offset: u64) -> Result<()> {
+        let text_section = self.memory_maps.get_text_section();
+        let breakpoint_address = text_section.range_from - text_section.offset + text_offset;
+
+        if self.breakpoints.contains_key(&breakpoint_address) {
+            return Err(Error::BreakpointExists(breakpoint_address));
+        }
+
+        self.set_breakpoint_at(breakpoint_address)
+    }
+
+    pub fn get_tracee_pc(&self) -> Result<u64> {
+        let regs = ptrace::getregs(self.tracee_pid).map_err(|errno| {
+            error!("Could not read registers of tracee: {errno}");
+
+            Error::ReadRegisters
+        })?;
+
+        Ok(regs.rip)
+    }
+
+    pub fn set_tracee_pc(&self, new_pc: u64) -> Result<()> {
+        let mut regs = ptrace::getregs(self.tracee_pid).map_err(|errno| {
+            error!("Could not read registers of tracee: {errno}");
+
+            Error::ReadRegisters
+        })?;
+        regs.rip = new_pc;
+
+        ptrace::setregs(self.tracee_pid, regs).map_err(|errno| {
+            error!("Could not write registers of tracee: {errno}");
+
+            Error::WriteRegisters
+        })?;
+
+        Ok(())
+    }
+
+    fn wait_for_tracee(&self) -> Result<WaitStatus> {
+        nix::sys::wait::waitpid(self.tracee_pid, None).map_err(|errno| {
+            error!("failed waitpid after stepping one instruction: {errno}");
+
+            Error::ContinueExecution
+        })
+    }
+
     pub fn continue_execution(&mut self) -> Result<ContinueExecutionOutcome> {
+        let stopped_pc = self.get_tracee_pc()?;
+        let breakpoint_pc = stopped_pc - 1;
+
+        // There has to be a better mechanism to detect a software breakpoint
+        // Replaces the software breakpoint with the original word at the breakpoint address,
+        // steps a single instruction and replaces the int3 instruction back into the breakpoint address
+        if let Some(replaced_word) = self.breakpoints.get(&breakpoint_pc) {
+            info!("Hit Software Breakpoint at {:08x}", breakpoint_pc);
+
+            self.set_tracee_pc(breakpoint_pc)?;
+            ptrace::write(
+                self.tracee_pid,
+                breakpoint_pc as *mut core::ffi::c_void,
+                *replaced_word,
+            )
+            .map_err(|errno| {
+                error!("failed to write to address {:08x}: {errno}", breakpoint_pc);
+
+                Error::WriteMemory(breakpoint_pc)
+            })?;
+
+            ptrace::step(self.tracee_pid, None).map_err(|errno| {
+                error!("failed ptrace step call: {errno}");
+
+                Error::ContinueExecution
+            })?;
+
+            self.wait_for_tracee()?;
+
+            self.set_breakpoint_at(breakpoint_pc)?;
+        }
+
         nix::sys::ptrace::cont(self.tracee_pid, None).map_err(|errno| {
             error!("failed ptrace cont call: {errno}");
 
             Error::ContinueExecution
         })?;
 
-        let wait_status = nix::sys::wait::waitpid(self.tracee_pid, None).map_err(|errno| {
-            error!("failed waitpid after continuing execution: {errno}");
-
-            Error::ContinueExecution
-        })?;
+        let wait_status = self.wait_for_tracee()?;
 
         match wait_status {
             WaitStatus::Exited(_pid, exit_code) => {
+                info!("Process exited with code {exit_code}");
                 Ok(ContinueExecutionOutcome::ProcessExited(exit_code))
             }
             _ => Ok(ContinueExecutionOutcome::Other),
