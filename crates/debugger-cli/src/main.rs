@@ -1,46 +1,90 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, process::ExitCode};
 
 use clap::Parser;
+use clap_repl::{
+    ClapEditor,
+    reedline::{DefaultPrompt, DefaultPromptSegment},
+};
 use debugger_core::{ContinueExecutionOutcome, Debugger};
 use envconfig::Envconfig;
-use log::{LevelFilter, error, info};
+use log::LevelFilter;
 
 #[derive(Envconfig)]
-struct Config {
+struct EnvvarConfig {
     #[envconfig(from = "RUST_LOG", default = "INFO")]
     pub log_level: LevelFilter,
 }
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
-struct Args {
+struct ProgramArgs {
     executable_path: PathBuf,
 }
 
-fn main() -> anyhow::Result<()> {
+#[derive(Parser, Debug)]
+#[command(name = "")]
+enum ReplCommand {
+    Continue,
+    Break {
+        #[clap(value_parser=clap_num::maybe_hex::<u64>)]
+        text_offset: u64,
+    },
+    Quit,
+}
+
+fn main() -> std::process::ExitCode {
     // For development/testing only
     let _ = dotenvy::dotenv();
 
-    let config = Config::init_from_env()?;
+    let config = match EnvvarConfig::init_from_env() {
+        Ok(config) => config,
+        Err(error) => {
+            println!("Got error while parsing environment variables: {error}");
+            return ExitCode::FAILURE;
+        }
+    };
     env_logger::builder().filter_level(config.log_level).init();
 
-    let args = Args::parse();
+    let args = ProgramArgs::parse();
 
-    let mut debugger = Debugger::new_with_forked_child(args.executable_path).unwrap();
+    let mut debugger = match Debugger::new_with_forked_child(args.executable_path) {
+        Ok(debugger) => debugger,
+        Err(err) => {
+            println!("Failed to create debugger instance: {err}");
+            return ExitCode::FAILURE;
+        }
+    };
 
-    for _ in 0..10 {
-        info!("Continuing execution...");
-        match debugger.continue_execution() {
+    let prompt = DefaultPrompt {
+        left_prompt: DefaultPromptSegment::Empty,
+        right_prompt: DefaultPromptSegment::Empty,
+    };
+    let rl = ClapEditor::<ReplCommand>::builder()
+        .with_prompt(Box::new(prompt))
+        .build();
+
+    rl.repl(|command| match command {
+        ReplCommand::Continue => match debugger.continue_execution() {
             Ok(ContinueExecutionOutcome::ProcessExited(code)) => {
-                info!("Process exited with code {code}");
-                break;
+                println!("Process exited with code {code}. Quitting...");
+                std::process::exit(0);
             }
             Ok(ContinueExecutionOutcome::Other) => {}
             Err(err) => {
-                error!("Error: {err}");
+                println!("Got error while continuing execution: {err}");
+                std::process::exit(0);
+            }
+        },
+        ReplCommand::Break { text_offset } => {
+            if let Err(err) = debugger.set_breakpoint_at_text_offset(text_offset) {
+                println!("Failed to set breakpoint: {err}");
             }
         }
-    }
+        ReplCommand::Quit => {
+            // TODO kill children of debugger
+            std::process::exit(0);
+        }
+    });
 
-    Ok(())
+    ExitCode::SUCCESS
 }
