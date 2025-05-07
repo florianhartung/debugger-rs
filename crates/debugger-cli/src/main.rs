@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use clap::Parser;
 use debugger_core::{ContinueExecutionOutcome, Debugger};
 use envconfig::Envconfig;
-use log::{error, info, LevelFilter};
+use log::{LevelFilter, error, info};
 
 #[derive(Envconfig)]
 struct Config {
