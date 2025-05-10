@@ -1,4 +1,4 @@
-use std::{collections::HashMap, iter, path::PathBuf, string};
+use std::{collections::HashMap, path::PathBuf};
 
 use log::{debug, error, info};
 use nix::{
@@ -128,7 +128,7 @@ impl Debugger {
             return Err(Error::ChildAttachment);
         }
 
-        let proc_exe_path = PathBuf::from(format!("/proc/{}/exe", pid));
+        let proc_exe_path = PathBuf::from(format!("/proc/{pid}/exe"));
         let executable_path = nix::fcntl::readlink(&proc_exe_path)
             .map_err(|_| {
                 error!("Could not get executable path from pid {pid}");
@@ -236,7 +236,7 @@ impl Debugger {
         // Replaces the software breakpoint with the original word at the breakpoint address,
         // steps a single instruction and replaces the int3 instruction back into the breakpoint address
         if let Some(replaced_word) = self.breakpoints.get(&breakpoint_pc) {
-            info!("Hit Software Breakpoint at {:08x}", breakpoint_pc);
+            info!("Hit Software Breakpoint at {breakpoint_pc:08x}");
 
             self.set_tracee_pc(breakpoint_pc)?;
             ptrace::write(
@@ -245,7 +245,7 @@ impl Debugger {
                 *replaced_word,
             )
             .map_err(|errno| {
-                error!("failed to write to address {:08x}: {errno}", breakpoint_pc);
+                error!("failed to write to address {breakpoint_pc:08x}: {errno}");
 
                 Error::WriteMemory(breakpoint_pc)
             })?;

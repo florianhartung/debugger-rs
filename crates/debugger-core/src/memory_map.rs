@@ -111,7 +111,7 @@ pub struct ProcMemoryMaps {
 
 impl ProcMemoryMaps {
     pub fn from_pid(pid: Pid) -> Result<Self, std::io::Error> {
-        let maps_content = std::fs::read_to_string(format!("/proc/{}/maps", pid))?;
+        let maps_content = std::fs::read_to_string(format!("/proc/{pid}/maps"))?;
 
         let memory_maps: Vec<MemoryMap> = maps_content
             .lines()
