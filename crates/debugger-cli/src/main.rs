@@ -1,6 +1,6 @@
 use std::{path::PathBuf, process::ExitCode};
 
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use clap_repl::{
     ClapEditor,
     reedline::{DefaultPrompt, DefaultPromptSegment},
@@ -24,12 +24,25 @@ struct ProgramArgs {
 #[derive(Parser, Debug)]
 #[command(name = "")]
 enum ReplCommand {
+    #[clap(alias = "c")]
     Continue,
+    #[clap(alias = "b")]
     Break {
         #[clap(value_parser=clap_num::maybe_hex::<u64>)]
         text_offset: u64,
     },
+    #[clap(alias = "i")]
+    Info {
+        #[command(subcommand)]
+        command: InfoCommand,
+    },
+    #[clap(alias = "q")]
     Quit,
+}
+
+#[derive(Debug, Subcommand)]
+enum InfoCommand {
+    Functions,
 }
 
 fn main() -> std::process::ExitCode {
@@ -84,6 +97,17 @@ fn main() -> std::process::ExitCode {
             // TODO kill children of debugger
             std::process::exit(0);
         }
+        ReplCommand::Info { command } => match command {
+            InfoCommand::Functions => match debugger.list_function_symbols() {
+                Ok(functions) => {
+                    println!("List of all functions:");
+                    for function in functions {
+                        println!("- {function}");
+                    }
+                }
+                Err(err) => println!("Failed to list all functions: {err}"),
+            },
+        },
     });
 
     ExitCode::SUCCESS
