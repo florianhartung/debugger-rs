@@ -52,6 +52,7 @@ pub struct Debugger {
 
 pub enum ContinueExecutionOutcome {
     ProcessExited(i32),
+    BreakpointHit,
     Other,
 }
 
@@ -229,38 +230,6 @@ impl Debugger {
     }
 
     pub fn continue_execution(&mut self) -> Result<ContinueExecutionOutcome> {
-        let stopped_pc = self.get_tracee_pc()?;
-        let breakpoint_pc = stopped_pc - 1;
-
-        // There has to be a better mechanism to detect a software breakpoint
-        // Replaces the software breakpoint with the original word at the breakpoint address,
-        // steps a single instruction and replaces the int3 instruction back into the breakpoint address
-        if let Some(replaced_word) = self.breakpoints.get(&breakpoint_pc) {
-            info!("Hit Software Breakpoint at {breakpoint_pc:08x}");
-
-            self.set_tracee_pc(breakpoint_pc)?;
-            ptrace::write(
-                self.tracee_pid,
-                breakpoint_pc as *mut core::ffi::c_void,
-                *replaced_word,
-            )
-            .map_err(|errno| {
-                error!("failed to write to address {breakpoint_pc:08x}: {errno}");
-
-                Error::WriteMemory(breakpoint_pc)
-            })?;
-
-            ptrace::step(self.tracee_pid, None).map_err(|errno| {
-                error!("failed ptrace step call: {errno}");
-
-                Error::ContinueExecution
-            })?;
-
-            self.wait_for_tracee()?;
-
-            self.set_breakpoint_at(breakpoint_pc)?;
-        }
-
         nix::sys::ptrace::cont(self.tracee_pid, None).map_err(|errno| {
             error!("failed ptrace cont call: {errno}");
 
@@ -273,6 +242,43 @@ impl Debugger {
             WaitStatus::Exited(_pid, exit_code) => {
                 info!("Process exited with code {exit_code}");
                 Ok(ContinueExecutionOutcome::ProcessExited(exit_code))
+            }
+            WaitStatus::Stopped(_pid, Signal::SIGTRAP) => {
+                let stopped_pc = self.get_tracee_pc()?;
+                let breakpoint_pc = stopped_pc - 1;
+
+                // There has to be a better mechanism to detect a software breakpoint
+                // Replaces the software breakpoint with the original word at the breakpoint address,
+                // steps a single instruction and replaces the int3 instruction back into the breakpoint address
+                if let Some(replaced_word) = self.breakpoints.get(&breakpoint_pc) {
+                    info!("Hit Software Breakpoint at {breakpoint_pc:08x}");
+
+                    self.set_tracee_pc(breakpoint_pc)?;
+                    ptrace::write(
+                        self.tracee_pid,
+                        breakpoint_pc as *mut core::ffi::c_void,
+                        *replaced_word,
+                    )
+                    .map_err(|errno| {
+                        error!("failed to write to address {breakpoint_pc:08x}: {errno}");
+
+                        Error::WriteMemory(breakpoint_pc)
+                    })?;
+
+                    ptrace::step(self.tracee_pid, None).map_err(|errno| {
+                        error!("failed ptrace step call: {errno}");
+
+                        Error::ContinueExecution
+                    })?;
+
+                    self.wait_for_tracee()?;
+
+                    self.set_breakpoint_at(breakpoint_pc)?;
+
+                    Ok(ContinueExecutionOutcome::BreakpointHit)
+                } else {
+                    Ok(ContinueExecutionOutcome::Other)
+                }
             }
             _ => Ok(ContinueExecutionOutcome::Other),
         }

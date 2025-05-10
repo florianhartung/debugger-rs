@@ -107,6 +107,9 @@ fn main() -> std::process::ExitCode {
                 println!("Process exited with code {code}. Quitting...");
                 std::process::exit(0);
             }
+            Ok(ContinueExecutionOutcome::BreakpointHit) => {
+                println!("Hit breakpoint");
+            }
             Ok(ContinueExecutionOutcome::Other) => {}
             Err(err) => {
                 println!("Got error while continuing execution: {err}");
