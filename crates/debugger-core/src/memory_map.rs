@@ -66,9 +66,7 @@ impl MemoryMap {
 
     fn from_str(entry: &str) -> Result<Self, ParseError> {
         let mut parts = entry.split(" ").filter(|s| !s.is_empty());
-        let range = parts
-            .next()
-            .ok_or(ParseError::ExpectedField("range"))?;
+        let range = parts.next().ok_or(ParseError::ExpectedField("range"))?;
         let (range_from, range_to) = Self::parse_range(range, '-', 16)?;
 
         let permissions = parts
@@ -81,10 +79,8 @@ impl MemoryMap {
             .and_then(|s| u64::from_str_radix(s, 16).ok())
             .ok_or(ParseError::ExpectedField("offset"))?;
 
-        let device = parts
-            .next()
-            .ok_or(ParseError::ExpectedField("device"))?;
-        let (device_major, device_minor) = Self::parse_range(device, ':', 10)?;
+        let device = parts.next().ok_or(ParseError::ExpectedField("device"))?;
+        let (device_major, device_minor) = Self::parse_range(device, ':', 16)?;
 
         let inode_number = parts
             .next()
