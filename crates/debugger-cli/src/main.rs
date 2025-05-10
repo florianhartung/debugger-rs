@@ -126,7 +126,11 @@ fn main() -> std::process::ExitCode {
                 Ok(functions) => {
                     println!("List of all functions:");
                     for function in functions {
-                        println!("- {function}");
+                        println!(
+                            "- {} ({:#x}) ",
+                            function.name.unwrap_or("---"),
+                            function.offset,
+                        );
                     }
                 }
                 Err(err) => println!("Failed to list all functions: {err}"),

@@ -31,7 +31,7 @@ impl Debugger {
             .map(|symbol| symbol.map(|symbol| symbol.st_value))
     }
 
-    pub fn list_function_symbols(&self) -> Result<Vec<&str>> {
+    pub fn list_function_symbols(&self) -> Result<Vec<FunctionSymbol>> {
         self.parse_symbol_table().and_then(|tables| {
             tables.map_or_else(
                 || Ok(Vec::new()),
@@ -40,17 +40,24 @@ impl Debugger {
                         .iter()
                         .filter(|symbol| symbol.st_symtype() == STT_FUNC)
                         .map(|symbol| {
-                            if symbol.st_name > 0 {
-                                string_table
-                                    .get(symbol.st_name as usize)
-                                    .map_err(Into::into)
+                            let name = if symbol.st_name > 0 {
+                                Some(string_table.get(symbol.st_name as usize)?)
                             } else {
-                                Ok("")
-                            }
+                                None
+                            };
+                            Ok(FunctionSymbol {
+                                name,
+                                offset: symbol.st_value,
+                            })
                         })
                         .collect()
                 },
             )
         })
     }
+}
+
+pub struct FunctionSymbol<'a> {
+    pub name: Option<&'a str>,
+    pub offset: u64,
 }
