@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::{collections::HashMap, iter, path::PathBuf, string};
 
 use log::{debug, error, info};
 use nix::{
@@ -10,9 +10,14 @@ use memory_map::ProcMemoryMaps;
 
 mod libc_wrappers;
 mod memory_map;
+pub mod symbols;
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
+    #[error("executable path provided is not readable")]
+    NoReadExecutablePath(PathBuf),
+    #[error("invalid elf file")]
+    InvalidElfFile(#[from] elf::ParseError),
     #[error("failed to attach debugger to child process")]
     ChildAttachment,
     #[error("failed to continue execution of child process")]
@@ -41,6 +46,8 @@ pub struct Debugger {
     tracee_pid: Pid,
     memory_maps: ProcMemoryMaps,
     breakpoints: HashMap<u64, i64>,
+
+    executable_data: Vec<u8>,
 }
 
 pub enum ContinueExecutionOutcome {
@@ -50,6 +57,11 @@ pub enum ContinueExecutionOutcome {
 
 impl Debugger {
     pub fn new_with_forked_child(executable_path: PathBuf) -> Result<Self> {
+        // read the file data first, even though its needed only later. this validates that the executable file is readable
+        let Ok(executable_data) = std::fs::read(&executable_path) else {
+            return Err(Error::NoReadExecutablePath(executable_path));
+        };
+
         debug!("Forking process and executing {executable_path:?} in a child process...");
 
         // SAFETY: Fork is generally safe to call, because it clones the entire process.
@@ -94,6 +106,7 @@ impl Debugger {
             tracee_pid: child_pid,
             memory_maps,
             breakpoints: HashMap::new(),
+            executable_data,
         };
 
         info!(
@@ -124,6 +137,10 @@ impl Debugger {
             })?
             .into();
 
+        let Ok(executable_data) = std::fs::read(&executable_path) else {
+            return Err(Error::NoReadExecutablePath(executable_path));
+        };
+
         let memory_maps = ProcMemoryMaps::from_pid(pid)?;
 
         let debugger = Self {
@@ -131,6 +148,7 @@ impl Debugger {
             tracee_pid: pid,
             memory_maps,
             breakpoints: HashMap::new(),
+            executable_data,
         };
 
         info!("Successfully attached debugger to running process with pid {pid}");
