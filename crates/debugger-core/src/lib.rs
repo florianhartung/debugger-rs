@@ -156,7 +156,7 @@ impl Debugger {
         Ok(debugger)
     }
 
-    fn set_breakpoint_at(&mut self, breakpoint_address: u64) -> Result<()> {
+    pub fn set_breakpoint_at(&mut self, breakpoint_address: u64) -> Result<()> {
         let breakpoint_address_ptr = breakpoint_address as *mut core::ffi::c_void;
 
         let replaced_word =

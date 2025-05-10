@@ -1,4 +1,4 @@
-use std::{path::PathBuf, process::ExitCode};
+use std::{num::ParseIntError, path::PathBuf, process::ExitCode, str::FromStr};
 
 use clap::{Parser, Subcommand};
 use clap_repl::{
@@ -28,8 +28,9 @@ enum ReplCommand {
     Continue,
     #[clap(alias = "b")]
     Break {
-        #[clap(value_parser=clap_num::maybe_hex::<u64>)]
-        text_offset: u64,
+        #[clap(value_parser=clap::value_parser!(BreakpointLocation))]
+        /// An offset where the breakpoint will be placed as a decimal (123) or hexadecimal number (0x123). The prefix "text:" can be used to specify an offset relative to the start of the text section.
+        location: BreakpointLocation,
     },
     #[clap(alias = "i")]
     Info {
@@ -38,6 +39,23 @@ enum ReplCommand {
     },
     #[clap(alias = "q")]
     Quit,
+}
+
+#[derive(Debug, Clone)]
+enum BreakpointLocation {
+    Offset(u64),
+    TextOffset(u64),
+    // Symbol(String),
+}
+
+impl FromStr for BreakpointLocation {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        s.strip_prefix("text:").map_or_else(
+            || clap_num::maybe_hex::<u64>(s).map(BreakpointLocation::Offset),
+            |s| clap_num::maybe_hex::<u64>(s).map(BreakpointLocation::TextOffset),
+        )
+    }
 }
 
 #[derive(Debug, Subcommand)]
@@ -88,8 +106,14 @@ fn main() -> std::process::ExitCode {
                 std::process::exit(0);
             }
         },
-        ReplCommand::Break { text_offset } => {
-            if let Err(err) = debugger.set_breakpoint_at_text_offset(text_offset) {
+        ReplCommand::Break { location } => {
+            let res = match location {
+                BreakpointLocation::Offset(offset) => debugger.set_breakpoint_at(offset),
+                BreakpointLocation::TextOffset(offset) => {
+                    debugger.set_breakpoint_at_text_offset(offset)
+                }
+            };
+            if let Err(err) = res {
                 println!("Failed to set breakpoint: {err}");
             }
         }
