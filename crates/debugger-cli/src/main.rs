@@ -1,4 +1,4 @@
-use std::{num::ParseIntError, path::PathBuf, process::ExitCode, str::FromStr};
+use std::{convert::Infallible, path::PathBuf, process::ExitCode, str::FromStr};
 
 use clap::{Parser, Subcommand};
 use clap_repl::{
@@ -29,7 +29,7 @@ enum ReplCommand {
     #[clap(alias = "b")]
     Break {
         #[clap(value_parser=clap::value_parser!(BreakpointLocation))]
-        /// An offset where the breakpoint will be placed as a decimal (123) or hexadecimal number (0x123). The prefix "text:" can be used to specify an offset relative to the start of the text section.
+        /// An address where the breakpoint will be placed as a decimal (123) or hexadecimal number (0x123). The prefix "text:" can be used to specify an offset relative to the start of the text section. Also symbol names can be used.
         location: BreakpointLocation,
     },
     #[clap(alias = "i")]
@@ -43,18 +43,25 @@ enum ReplCommand {
 
 #[derive(Debug, Clone)]
 enum BreakpointLocation {
-    Offset(u64),
+    Address(u64),
     TextOffset(u64),
-    // Symbol(String),
+    Symbol(String),
 }
 
 impl FromStr for BreakpointLocation {
-    type Err = String;
+    type Err = Infallible;
+
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        s.strip_prefix("text:").map_or_else(
-            || clap_num::maybe_hex::<u64>(s).map(BreakpointLocation::Offset),
-            |s| clap_num::maybe_hex::<u64>(s).map(BreakpointLocation::TextOffset),
-        )
+        if let Some(offset) = s
+            .strip_prefix("text:")
+            .and_then(|s| clap_num::maybe_hex::<u64>(s).ok())
+        {
+            Ok(BreakpointLocation::TextOffset(offset))
+        } else if let Ok(offset) = clap_num::maybe_hex::<u64>(s) {
+            Ok(BreakpointLocation::Address(offset))
+        } else {
+            Ok(BreakpointLocation::Symbol(s.to_owned()))
+        }
     }
 }
 
@@ -108,9 +115,22 @@ fn main() -> std::process::ExitCode {
         },
         ReplCommand::Break { location } => {
             let res = match location {
-                BreakpointLocation::Offset(offset) => debugger.set_breakpoint_at(offset),
+                BreakpointLocation::Address(address) => debugger.set_breakpoint_at(address),
                 BreakpointLocation::TextOffset(offset) => {
                     debugger.set_breakpoint_at_text_offset(offset)
+                }
+                BreakpointLocation::Symbol(symbol_name) => {
+                    match debugger.find_symbol_address_by_name(&symbol_name) {
+                        Ok(Some(address)) => debugger.set_breakpoint_at(address),
+                        Ok(None) => {
+                            println!("No symbol found");
+                            return;
+                        }
+                        Err(err) => {
+                            println!("Got error during symbol look up: {err}");
+                            return;
+                        }
+                    }
                 }
             };
             if let Err(err) = res {
