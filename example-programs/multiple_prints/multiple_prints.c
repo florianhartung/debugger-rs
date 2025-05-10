@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 int fn_a() {
     printf("A\n");
 }
