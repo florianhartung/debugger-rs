@@ -124,7 +124,7 @@ fn main() -> std::process::ExitCode {
                 }
                 BreakpointLocation::Symbol(symbol_name) => {
                     match debugger.find_symbol_address_by_name(&symbol_name) {
-                        Ok(Some(address)) => debugger.set_breakpoint_at(address),
+                        Ok(Some(address)) => debugger.set_breakpoint_at_text_offset(address),
                         Ok(None) => {
                             println!("No symbol found");
                             return;
