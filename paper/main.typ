@@ -1,3 +1,4 @@
+#import "@preview/acrostiche:0.5.1": *
 #import "styling.typ": setup
 
 #let td = text(red)[TODO]
@@ -6,6 +7,14 @@
   title: "Development of a minimal x86-64 Unix debugger\n in Rust",
   authors: (("Florian Hartung", 6622800), ("Marek Freunscht", 9604914))
 )
+
+#let acs = (
+  "ELF": "Executable and Linkable Format",
+  "ASLR": "Address space layout randomization",
+  // DWARF is no an acronym
+)
+#init-acronyms(acs)
+#let acs = acs.keys().map(x => (x, ac(x))).to-dict()
 
 = Introduction
 // Motivation/ Context
@@ -28,10 +37,19 @@ Then we explore the workings and techniques used by popular debuggers through sp
 The next section presents our debugger with its initial requirements, development process and application in a test scenario.
 
 = Fundamentals
-#td
+This section describes fundamentals for processes on Unix/Unix-like systems and debuggers useful for later development.
 
 == Lifecycle of a process in Unix/Unix-like systems 
-#td
+Methods of creating processes
+- fork
+- exec @exec
+
+- What happens when a process is created?
+- #acs.ASLR
+
+- Memory maps & sections?
+
+== Signals
 
 == Debuggers
 // TODO present commands such as gdb's `break` and then present what happens internally
@@ -43,8 +61,15 @@ The next section presents our debugger with its initial requirements, developmen
   - Register + memory access/modification
   - Relating symbols to source code
 
-// == Symbols
+== Symbols
+- Debug information produced by compilers
+- Types of symbols for #acs.ELF binaries
+- DWARF#footnote("DWARF is not an acronym, instead it's a backcroynm") for stack frame debug information
+- Debuggers use this information to directly relate source code 
 
+- Look at ELF symbol table & string table for example
+
+// are variables & stack frame debug information also symbols?
 
 = Requirements
 // TODO: Unix & Unix-like systems
