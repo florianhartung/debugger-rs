@@ -7,7 +7,7 @@ fn main() {
         .filter_level(log::LevelFilter::Debug)
         .init();
 
-    let path = PathBuf::from("./crates/debugger-core/examples/software_breakpoints/test");
+    let path = PathBuf::from("./example-programs/multiple_prints/multiple_prints");
     let mut debugger = Debugger::new_with_forked_child(path).unwrap();
 
     // Break at fn_c
