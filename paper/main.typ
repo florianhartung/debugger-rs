@@ -60,25 +60,35 @@ The mappings of memory sections are stored by the kernel and made available at `
 == Signals
 - What are signals?
 - What kinds of signals? Name examples
+- Signal handlers (`wait` syscalls??)
 - Why do we need them?
 
 == Debuggers
+// Abstract level
 Debuggers are programs that can attach themselves to other processes and then monitor and modify them.
 They are mainly being used by developers for debugging programs, i.e. identifying and tracing bugs/errors in these programs.
-Although there are other use cases such as reverse engineering programs.
+Although there are other use cases such as reverse engineering.
 
-- What does a debugger do on an abstract level [gdb manpage]
-  - Generally: Observe other processes while they are running
-  - Most command-line debuggers are #acrpl("REPL") allowing:
-    - Read/Modify data & program
-    - Stopping on certain conditions
-    - Resuming execution
+// Usage & common commands
+Widely-known debuggers, namely `gdb` or `lldb`, are terminal #acrpl("REPL") with a notable overlap of common commands between them.
+// Create process & execution
+Commands such as `run` or `continue` are used to create and attach to a new process or resume execution of a process the debugger is already attached to.
+// Breakpoints
+Breakpoints can be set via commands such as `break` or `breakpoint set` for arbitrary code addresses or addresses of symbols.
+When the program counter of the process then reaches a previously set breakpoint, execution is preempted and control transferred to the debugger allowing further user input to happen.
+// Watchpoints
+Watchpoints are similar to breakpoints allowing execution preemption, however they trigger on memory reads and writes of set addresses instead of execution.
+// Read/write program state
+While execution of a process is halted, the process state including but not limited to call frames or variable contents can be read and modified.
+
+// Requirement for OS interaction
+- #acrpl("OS") usually isolates processes
+- However debuggers require various types of access to other processes
+- Thus #acrpl("OS") also have to provide some kind of method for one process to debug another
+  - For Unix/Unix-like systems this is ptrace (short for: process trace), which is a syscall for a family of different request types
+  - Also methods to circumvent the OS exist? Hardware breakpoints
+
 - Interactions with #acrpl("OS")
-  - #acrpl("OS") usually isolates processes
-  - However debuggers require various types of access to other processes
-  - Thus #acrpl("OS") also have to provide some kind of method for one process to debug another
-    - For Unix/Unix-like systems this is ptrace (short for: process trace), which is a syscall for a family of different request types
-    - Also methods to circumvent the OS exist? Hardware breakpoints
 - Common features of debuggers
   - Breakpoints: Halting execution for later continuation
     // TODO present commands such as gdb's `break` and then present what happens internally
@@ -87,9 +97,11 @@ Although there are other use cases such as reverse engineering programs.
   - Relating symbols to source code: Useful feature for user
 
 == Symbols
-- One kind of debug information produced by compilers
+- Debuggers only know addresses by default, however this makes usage hard
+
+- Compilers improve debugging experience by producing additional information useful to a debugger
 - Types of symbols for #acr("ELF") binaries: functions, ...
-- Debuggers use this information to directly relate source code 
+- Debuggers use this information as annotations to relate parts of machine code to its original source code
 - Look at ELF symbol table & string table for example
 
 // are variables & stack frame debug information also symbols?
