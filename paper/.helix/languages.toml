@@ -1,0 +1,2 @@
+[language-server.tinymist.config]
+config = { exportPdf = "onSave" }

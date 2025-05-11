@@ -22,10 +22,10 @@
   )[
     #grid(columns: (1fr, auto), align: (left, right),
       align(horizon, key_value_table(
-        ([Studiengang Kurs], [TINF22IT1]),
+        ([Studiengang, Kurs], [TINF22, IT1]),
         ([Vorlesung], [Moderne Konzepte der Informatik]),
         ([Betreuer], [Bauer, Johannes, Prof. Dr.-Ing.]),
-        ([Abgabedatum], [#text(red)[TODO]]),
+        ([Abgabedatum], [15.05.2025]),
       )),
       image("images/dhbw_icon.png", height: 4em)
     )

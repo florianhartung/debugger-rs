@@ -10,11 +10,13 @@
 
 #let acs = (
   "ELF": "Executable and Linkable Format",
-  "ASLR": "Address space layout randomization",
+  "ASLR": "Address Space Layout Randomization",
+  "PIE": "Position Independent Executable",
   // DWARF is no an acronym
+  "REPL": "Read-eval-print loop",
+  "OS": "Operating System"
 )
 #init-acronyms(acs)
-#let acs = acs.keys().map(x => (x, ac(x))).to-dict()
 
 = Introduction
 // Motivation/ Context
@@ -39,37 +41,58 @@ The next section presents our debugger with its initial requirements, developmen
 = Fundamentals
 This section describes fundamentals for processes on Unix/Unix-like systems and debuggers useful for later development.
 
-== Lifecycle of a process in Unix/Unix-like systems 
-Methods of creating processes
-- fork
-- exec @exec
+== Process lifecycle in Unix/Unix-like systems 
+Processes are programs during runtime.
+They contain information such as the program counter, registers, variables, open files or page metadata@modern-os.
 
-- What happens when a process is created?
-- #acs.ASLR
+// Process creation
+In Unix and Unix-like systems, there exist multiple methods for creating new processes, however the most common one is the `fork` syscall@fork.
+A process may use this syscall to create an identical clone of themselves.
+Followed by diverging control flow inside this process' program code, the newly created child process can then behave differently form the original parent process.
+Often the child process then calls a syscall of the `exec` family (or the underlying `execve` directly), which replaces its current memory layout with a completely new one from a specified program.
 
-- Memory maps & sections?
+// ASLR & memory mappings
+During this `exec` syscall, the #acr("ASLR") technique is initialized, provided that the executed program is a #acr("PIE").
+#acr("ASLR") randomizes the starting address of memory section such as the text, heap, or stack sections to prevent certain attacks, which exploit the normally fixed memory layout.
+The mappings of memory sections are stored by the kernel and made available at `/proc/<PROC_ID>/maps` for every process by its process id `<PROC_ID>`.
 
 == Signals
+- What are signals?
+- What kinds of signals? Name examples
+- Why do we need them?
 
 == Debuggers
-// TODO present commands such as gdb's `break` and then present what happens internally
+Debuggers are programs that can attach themselves to other processes and then monitor and modify them.
+They are mainly being used by developers for debugging programs, i.e. identifying and tracing bugs/errors in these programs.
+Although there are other use cases such as reverse engineering programs.
+
 - What does a debugger do on an abstract level [gdb manpage]
-- Interactions with operating systems
-- Features of debuggers
-  - Breakpoints 
-  - Instruction stepping
-  - Register + memory access/modification
-  - Relating symbols to source code
+  - Generally: Observe other processes while they are running
+  - Most command-line debuggers are #acrpl("REPL") allowing:
+    - Read/Modify data & program
+    - Stopping on certain conditions
+    - Resuming execution
+- Interactions with #acrpl("OS")
+  - #acrpl("OS") usually isolates processes
+  - However debuggers require various types of access to other processes
+  - Thus #acrpl("OS") also have to provide some kind of method for one process to debug another
+    - For Unix/Unix-like systems this is ptrace (short for: process trace), which is a syscall for a family of different request types
+    - Also methods to circumvent the OS exist? Hardware breakpoints
+- Common features of debuggers
+  - Breakpoints: Halting execution for later continuation
+    // TODO present commands such as gdb's `break` and then present what happens internally
+  - Instruction stepping: "Dynamic breakpoints" on a smaller scale for every instruction.
+  - Register + memory access/modification: Read/write data
+  - Relating symbols to source code: Useful feature for user
 
 == Symbols
-- Debug information produced by compilers
-- Types of symbols for #acs.ELF binaries
-- DWARF#footnote("DWARF is not an acronym, instead it's a backcroynm") for stack frame debug information
+- One kind of debug information produced by compilers
+- Types of symbols for #acr("ELF") binaries: functions, ...
 - Debuggers use this information to directly relate source code 
-
 - Look at ELF symbol table & string table for example
 
 // are variables & stack frame debug information also symbols?
+- Short paragraph on DWARF#footnote("DWARF is not an acronym, instead it's a backcroynm") for stack frame debug information
 
 = Requirements
 // TODO: Unix & Unix-like systems
