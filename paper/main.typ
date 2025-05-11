@@ -12,6 +12,7 @@
   "ELF": "Executable and Linkable Format",
   "ASLR": "Address Space Layout Randomization",
   "PIE": "Position Independent Executable",
+  "API": "Application Programming Interface",
   // DWARF is no an acronym
   "REPL": "Read-eval-print loop",
   "OS": "Operating System"
@@ -121,10 +122,25 @@ Although there are other use cases such as reverse engineering programs.
 - PTRACE_ATTACH vs fork + PTRACE_TRACEME
 
 == Setting breakpoints
-- Software vs hardware breakpoints
-  - PTRACE_POKETEXT (Writing int3 into program flow) or hardware debug registers
-  - One or both?
+There are two main methods to set a breakpoint inside a process that is currently running, software breakpoints and hardware breakpoints.
 
+Software breakpoints use the int3 instruction of the x86-64 instruction set, which triggers an exception inside the processor #cite(<intel-manual>).
+When this exception is encountered, a trap occurs, transferring control to the operating system, which in the case of Unix-like systems will send a SIGTRAP to the running process.
+To set a software breakpoint in the tracee process, the debugger may write the `int3` instruction directly into the executable text segment of the tracee with the PTRACE_POKETEXT #acr("API") #cite(<ptrace>).
+The first byte of the instruction at the breakpoint address can be overwritten with `int3`, which has a one-byte opcode (0xCC). 
+When this breakpoint is hit during execution, the debugger has to write back the first byte of the instruction which was in the breakpoint address initially.
+Execution of the process is then resumed for one instruction, after which the `int3` instruction is re-inserted into the breakpoint, so that it can be hit again.
+
+In contrast, hardware breakpoints use the hardware debug registers that are a part of the x86-64 architecture.
+These registers make it possible to specify breakpoints at 4 different addresses inside the process.
+However, the breakpoints that are stored in hardware registers are more powerful than software breakpoints, as they can also be triggered on memory reads and writes, as opposed to just execution.
+This may be specified in the debug control register (DR7) for each address individually, which is another debug register. 
+While the direct access of these registers via the `mov` instruction requires a privileged process, they can also be accessed with the PTRACE_WRITE_USER #acr("API") #cite(<ptrace>), that allows the tracer to write fields of the `user` struct#footnote[see glibc source: #link("https://sourceware.org/git/?p=glibc.git;a=blob;f=sysdeps/unix/sysv/linux/x86/sys/user.h"))] in the tracee process, which we use in our implementatio. #cite(<intel-manual>)
+
+Our debugger implements both types of breakpoint, as they have unique strengths and weaknesses.
+Software breakpoints are used as the primary execution breakpoint mechanism, because there is no limit to the number of software breakpoints.
+Hardware breakpoints, on the other hand, are more flexible in the functionality that they provide, as they can be used to monitor memory access rather than just execution.
+However, the number of hardware breakpoints is limited to 4 by the processor architecture.
 == Reading memory & registers
 - PTRACE_PEEKTEXT, PTRACE_POKEDATA & PTRACE_GETREGS
 
