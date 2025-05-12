@@ -80,32 +80,32 @@ When the program counter of the process then reaches a previously set breakpoint
 Watchpoints are similar to breakpoints allowing execution preemption, however they trigger on memory reads and writes of set addresses instead of execution.
 // Read/write program state
 While execution of a process is halted, the process state including but not limited to call frames or variable contents can be read and modified.
+// TODO maybe talk about instruction stepping: "Dynamic breakpoints" on a smaller scale for every instruction.
 
 // Requirement for OS interaction
-- #acrpl("OS") usually isolates processes
-- However debuggers require various types of access to other processes
-- Thus #acrpl("OS") also have to provide some kind of method for one process to debug another
-  - For Unix/Unix-like systems this is ptrace (short for: process trace), which is a syscall for a family of different request types
-  - Also methods to circumvent the OS exist? Hardware breakpoints
-
-- Interactions with #acrpl("OS")
-- Common features of debuggers
-  - Breakpoints: Halting execution for later continuation
-    // TODO present commands such as gdb's `break` and then present what happens internally
-  - Instruction stepping: "Dynamic breakpoints" on a smaller scale for every instruction.
-  - Register + memory access/modification: Read/write data
-  - Relating symbols to source code: Useful feature for user
+#acrpl("OS") usually isolate processes, their resources, memory, etc. from each other.
+However debuggers require access to other processes to be able to debug them.
+Thus debuggers require #acrpl("OS") to provide some interface through which they can access and debug these other processes.
+For Unix and Unix-like systems this is the `ptrace` syscall, which is short for `process trace`.
+Even though it is a single syscall, `ptrace` combines various different commands useful for debuggers to trace other processes.
 
 == Symbols
-- Debuggers only know addresses by default, however this makes usage hard
+// Compilation <-> Loss of information
+When source code is compiled by a compiler to native machine code, a lot of information about the original source code is changed or completely lost.
+Such information may include the names of variables and functions or the layout of stack frames.
+Debugging these kinds of programs is time-consuming and most of the time not feasible in practice.
+// Motivate debug information
+To solve this problem, object/executable formats include sections where compilers can store additional debug information.
+Debuggers can read this debug information and use to give users meaningful insight into the debugged process.
 
-- Compilers improve debugging experience by producing additional information useful to a debugger
-- Types of symbols for #acr("ELF") binaries: functions, ...
-- Debuggers use this information as annotations to relate parts of machine code to its original source code
-- Look at ELF symbol table & string table for example
+// Symbols
+One crucial category of information compilers produce are symbols.
+Symbols relate string names to addresses in the final object/executable file.
+For #ac("ELF") files, symbols reside in a symbol table and their string names in an additional string table.
+#ac("ELF") symbols can be of different kinds, such as functions (`STT_FUNC`), sections (`STT_SECTION`), globals (`STT_GLOBAL`), etc. @elf.
 
 // are variables & stack frame debug information also symbols?
-- Short paragraph on DWARF#footnote("DWARF is not an acronym, instead it's a backcroynm") for stack frame debug information
+// - Short paragraph on DWARF#footnote("DWARF is not an acronym, instead it's a backcroynm") for stack frame debug information
 
 = Requirements
 // TODO: Unix & Unix-like systems
