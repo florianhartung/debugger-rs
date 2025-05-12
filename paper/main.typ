@@ -131,7 +131,24 @@ While execution of a process is halted, the process state including but not limi
 #td
 
 == Attaching to processes
-- PTRACE_ATTACH vs fork + PTRACE_TRACEME
+When beginning to debug a process, there are typically two scenarios for a debugger, attaching to a process that is already running and creating a new process.
+Both of these have available ptrace #acfp("API") to use with the debugger.
+
+Attaching to a running process can be done with either PTRACE_ATTACH or PTRACE_SEIZE.
+When using PTRACE_ATTACH, the attached process is signaled to stop immediately and the debugger should wait until that stop is completed using the `waitpid` syscall.
+The user can then set breakpoints or obtain information about the process while it is stopped.
+On the other hand, PTRACE_SEIZE does not stop the attached process and gives the debugger a little more flexibility to do so later with PTRACE_INTERRUPT.
+PTRACE_SEIZE also allows the debugger to use some other functionality, like PTRACE_LISTEN.
+However, in our implementation we use PTRACE_ATTACH because it is sufficient for our use case and the flexibility and complexity of PTRACE_SEIZE is not needed. @ptrace
+
+Another use case is the user wanting to debug an executable that is not already running in some process.
+In this case, the debugger can start the executable and initiate the tracing with ptrace.
+This is typically done by forking the debugger process, which leaves the programmer in control of what happens in the child process.
+After forking the parent, the child process initiates the tracing using PTRACE_TRACEME, which turns the parent process into the tracer @ptrace.
+Finally, the child process can be turned into the desired executable by executing an `execl` syscall.
+After this `execl` call executes successfully, a SIGTRAP will be sent to the tracee which stops it and leaves the debugger in control @exec.
+
+Both of these cases are supported in our implementation because they are fundamental for a functional debugger.
 
 == Setting breakpoints
 There are two main methods to set a breakpoint inside a process that is currently running, software breakpoints and hardware breakpoints.
