@@ -1,16 +1,19 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::{collections::HashMap, path::PathBuf, mem};
 
 use log::{debug, error, info};
 use nix::{
     sys::{ptrace, signal::Signal, wait::WaitStatus},
     unistd::{ForkResult, Pid},
+    libc,
 };
 
 use memory_map::ProcMemoryMaps;
+use watchpoint::Watchpoint;
 
 mod libc_wrappers;
 mod memory_map;
 pub mod symbols;
+pub mod watchpoint;
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
@@ -34,6 +37,12 @@ pub enum Error {
     BreakpointExists(u64),
     #[error("failed get executable path of pid {0}")]
     ReadExecutablePath(Pid),
+    #[error("{0} is not a valid debug register index")] 
+    DebugRegisterIndex(usize),
+    #[error("{0} ist not a valid value for the length of a watchpoint")]
+    WatchpointLengthValue(usize),
+    #[error("cannot add more than 4 watchpoints")]
+    MaxNumWatchpoints,
     #[error("an io error occured")]
     IoError(#[from] std::io::Error),
 }
@@ -46,13 +55,14 @@ pub struct Debugger {
     tracee_pid: Pid,
     memory_maps: ProcMemoryMaps,
     breakpoints: HashMap<u64, i64>,
-
+    watchpoints: HashMap<usize, (u64, Watchpoint)>,
     executable_data: Vec<u8>,
 }
 
 pub enum ContinueExecutionOutcome {
     ProcessExited(i32),
-    BreakpointHit,
+    BreakpointHit(u64),
+    WatchpointHit((u64, Watchpoint)),
     Other,
 }
 
@@ -107,6 +117,7 @@ impl Debugger {
             tracee_pid: child_pid,
             memory_maps,
             breakpoints: HashMap::new(),
+            watchpoints: HashMap::new(),
             executable_data,
         };
 
@@ -149,12 +160,19 @@ impl Debugger {
             tracee_pid: pid,
             memory_maps,
             breakpoints: HashMap::new(),
+            watchpoints: HashMap::new(),
             executable_data,
         };
 
         info!("Successfully attached debugger to running process with pid {pid}");
 
         Ok(debugger)
+    }
+
+    pub fn get_text_offset_address(&mut self, offset: u64) -> u64 {
+        let text_section = self.memory_maps.get_text_section();
+
+        text_section.range_from - text_section.offset + offset
     }
 
     pub fn set_breakpoint_at(&mut self, breakpoint_address: u64) -> Result<()> {
@@ -184,14 +202,49 @@ impl Debugger {
     }
 
     pub fn set_breakpoint_at_text_offset(&mut self, text_offset: u64) -> Result<()> {
-        let text_section = self.memory_maps.get_text_section();
-        let breakpoint_address = text_section.range_from - text_section.offset + text_offset;
+        let breakpoint_address = self.get_text_offset_address(text_offset);
 
         if self.breakpoints.contains_key(&breakpoint_address) {
             return Err(Error::BreakpointExists(breakpoint_address));
         }
 
         self.set_breakpoint_at(breakpoint_address)
+    }
+
+    pub fn set_watchpoint_at(&mut self, address: u64, watchpoint: Watchpoint) -> Result<()> {
+        let number_watchpoints = self.watchpoints.len();
+        let debug_register = number_watchpoints; 
+
+        if number_watchpoints == 4 {
+            return Err(Error::MaxNumWatchpoints);
+        }
+    
+        let mut debug_control = self.get_debug_control()?; 
+
+        self.set_debug_register(debug_register, address as i64);
+        debug_control |= 1 << (debug_register * 2);
+
+        match watchpoint {
+            Watchpoint::Execution => {},
+            Watchpoint::Data { condition, length } => {
+                debug_control &= !(0b1111 << (16 + (4 * debug_register)));
+                debug_control |= (condition as i64) << (16 + (4 * debug_register));
+                debug_control |= (length as i64) << (16 + (4 * debug_register));
+            },
+        }
+
+        self.set_debug_control(debug_control)?;
+
+        let value_pair = (address, watchpoint);
+        self.watchpoints.insert(debug_register, value_pair);
+        
+        Ok(())
+    }
+
+    pub fn set_watchpoint_at_text_offset(&mut self, text_offset: u64, watchpoint: Watchpoint) -> Result<()> {
+        let breakpoint_address = self.get_text_offset_address(text_offset);
+
+        self.set_watchpoint_at(breakpoint_address, watchpoint)
     }
 
     pub fn get_tracee_pc(&self) -> Result<u64> {
@@ -244,6 +297,16 @@ impl Debugger {
                 Ok(ContinueExecutionOutcome::ProcessExited(exit_code))
             }
             WaitStatus::Stopped(_pid, Signal::SIGTRAP) => {
+                if let Ok(status) = self.get_debug_status() {
+                    for i in 0..4 {
+                        if status & (1 << i) > 0 {
+                            let (address, watchpoint) = self.watchpoints.get(&i).expect("breakpoint to exist");
+                            info!("Hit watchpoint {watchpoint:?} at address 0x{address:012x?}");
+                            return Ok(ContinueExecutionOutcome::WatchpointHit((*address, *watchpoint)));
+                        }
+                    }
+                }
+
                 let stopped_pc = self.get_tracee_pc()?;
                 let breakpoint_pc = stopped_pc - 1;
 
@@ -275,7 +338,7 @@ impl Debugger {
 
                     self.set_breakpoint_at(breakpoint_pc)?;
 
-                    Ok(ContinueExecutionOutcome::BreakpointHit)
+                    Ok(ContinueExecutionOutcome::BreakpointHit(breakpoint_pc))
                 } else {
                     Ok(ContinueExecutionOutcome::Other)
                 }
