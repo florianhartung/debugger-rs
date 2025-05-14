@@ -4,7 +4,6 @@ let
   mkCApplication = name: pkgs.stdenv.mkDerivation {
     name = name;
     src = ./${name};
-    hardeningEnable = [ "pie" ];
     buildPhase = ''
       $CC ${name}.c -o ${name}
     '';
