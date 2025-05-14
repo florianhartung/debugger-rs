@@ -1,10 +1,10 @@
-use std::{collections::HashMap, path::PathBuf, mem};
+use std::{collections::HashMap, mem, path::PathBuf};
 
 use log::{debug, error, info};
 use nix::{
+    libc,
     sys::{ptrace, signal::Signal, wait::WaitStatus},
     unistd::{ForkResult, Pid},
-    libc,
 };
 
 use memory_map::ProcMemoryMaps;
@@ -37,7 +37,7 @@ pub enum Error {
     BreakpointExists(u64),
     #[error("failed get executable path of pid {0}")]
     ReadExecutablePath(Pid),
-    #[error("{0} is not a valid debug register index")] 
+    #[error("{0} is not a valid debug register index")]
     DebugRegisterIndex(usize),
     #[error("{0} ist not a valid value for the length of a watchpoint")]
     WatchpointLengthValue(usize),
@@ -215,35 +215,39 @@ impl Debugger {
 
     pub fn set_watchpoint_at(&mut self, address: u64, watchpoint: Watchpoint) -> Result<()> {
         let number_watchpoints = self.watchpoints.len();
-        let debug_register = number_watchpoints; 
+        let debug_register = number_watchpoints;
 
         if number_watchpoints == 4 {
             return Err(Error::MaxNumWatchpoints);
         }
-    
-        let mut debug_control = self.get_debug_control()?; 
+
+        let mut debug_control = self.get_debug_control()?;
 
         self.set_debug_register(debug_register, address as i64);
         debug_control |= 1 << (debug_register * 2);
 
         match watchpoint {
-            Watchpoint::Execution => {},
+            Watchpoint::Execution => {}
             Watchpoint::Data { condition, length } => {
                 debug_control &= !(0b1111 << (16 + (4 * debug_register)));
                 debug_control |= (condition as i64) << (16 + (4 * debug_register));
                 debug_control |= (length as i64) << (16 + (4 * debug_register));
-            },
+            }
         }
 
         self.set_debug_control(debug_control)?;
 
         let value_pair = (address, watchpoint);
         self.watchpoints.insert(debug_register, value_pair);
-        
+
         Ok(())
     }
 
-    pub fn set_watchpoint_at_text_offset(&mut self, text_offset: u64, watchpoint: Watchpoint) -> Result<()> {
+    pub fn set_watchpoint_at_text_offset(
+        &mut self,
+        text_offset: u64,
+        watchpoint: Watchpoint,
+    ) -> Result<()> {
         let breakpoint_address = self.get_text_offset_address(text_offset);
 
         self.set_watchpoint_at(breakpoint_address, watchpoint)
@@ -316,9 +320,13 @@ impl Debugger {
                 if let Ok(status) = self.get_debug_status() {
                     for i in 0..4 {
                         if status & (1 << i) > 0 {
-                            let (address, watchpoint) = self.watchpoints.get(&i).expect("breakpoint to exist");
+                            let (address, watchpoint) =
+                                self.watchpoints.get(&i).expect("breakpoint to exist");
                             info!("Hit watchpoint {watchpoint:?} at address 0x{address:012x?}");
-                            return Ok(ContinueExecutionOutcome::WatchpointHit((*address, *watchpoint)));
+                            return Ok(ContinueExecutionOutcome::WatchpointHit((
+                                *address,
+                                *watchpoint,
+                            )));
                         }
                     }
                 }

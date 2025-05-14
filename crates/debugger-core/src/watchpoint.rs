@@ -1,9 +1,9 @@
 use std::convert::TryFrom;
 
-use nix::sys::ptrace;
 use log::*;
+use nix::sys::ptrace;
 
-use crate::{Debugger, Error, Result}; 
+use crate::{Debugger, Error, Result};
 
 pub enum DebugRegisterOffsets {
     B0 = 0,
@@ -31,7 +31,7 @@ pub enum WatchpointLength {
 impl TryFrom<usize> for WatchpointLength {
     type Error = Error;
 
-    fn try_from(val: usize) -> Result<Self>{
+    fn try_from(val: usize) -> Result<Self> {
         match val {
             1 => Ok(WatchpointLength::OneByte),
             2 => Ok(WatchpointLength::TwoBytes),
@@ -59,7 +59,8 @@ impl Debugger {
     pub fn get_debug_register(&self, index: usize) -> Result<i64> {
         let offset = self.get_b0_offset() + (index * std::mem::size_of::<i64>());
 
-        let value = ptrace::read_user(self.tracee_pid, offset as *mut core::ffi::c_void).map_err(|_| Error::ReadRegisters)?;
+        let value = ptrace::read_user(self.tracee_pid, offset as *mut core::ffi::c_void)
+            .map_err(|_| Error::ReadRegisters)?;
 
         Ok(value)
     }
@@ -67,11 +68,13 @@ impl Debugger {
     pub fn set_debug_register(&self, index: usize, data: i64) -> Result<()> {
         let offset = self.get_b0_offset() + (index * std::mem::size_of::<i64>());
 
-        ptrace::write_user(self.tracee_pid, offset as *mut core::ffi::c_void, data).map_err(|errno| {
-            error!("Failed to write to debug register {index}: {errno}");
+        ptrace::write_user(self.tracee_pid, offset as *mut core::ffi::c_void, data).map_err(
+            |errno| {
+                error!("Failed to write to debug register {index}: {errno}");
 
-            Error::WriteRegisters
-        })?;
+                Error::WriteRegisters
+            },
+        )?;
 
         Ok(())
     }

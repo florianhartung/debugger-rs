@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
-use debugger_core::*;
 use debugger_core::watchpoint::*;
+use debugger_core::*;
 
 fn main() {
     env_logger::builder()
