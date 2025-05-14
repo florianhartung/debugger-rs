@@ -198,7 +198,7 @@ impl Debugger {
 
         self.breakpoints.insert(breakpoint_address, replaced_word);
 
-        info!("Set breakpoint at {breakpoint_address:08x}");
+        info!("Set breakpoint at 0x{breakpoint_address:012x}");
 
         Ok(())
     }
@@ -236,6 +236,8 @@ impl Debugger {
         }
 
         self.set_debug_control(debug_control)?;
+
+        info!("Set watchpoint {watchpoint:?} at 0x{address:012x}");
 
         let value_pair = (address, watchpoint);
         self.watchpoints.insert(debug_register, value_pair);
