@@ -43,6 +43,8 @@ pub enum Error {
     WatchpointLengthValue(usize),
     #[error("cannot add more than 4 watchpoints")]
     MaxNumWatchpoints,
+    #[error("failed to step one instruction")]
+    SingleStep,
     #[error("an io error occured")]
     IoError(#[from] std::io::Error),
 }
@@ -280,6 +282,20 @@ impl Debugger {
 
             Error::ContinueExecution
         })
+    }
+
+    pub fn step_instructions(&self, steps: u32) -> Result<u64> {
+        for _ in 0..steps {
+            ptrace::step(self.tracee_pid, None).map_err(|errno| {
+                error!("failed to single step execution {errno}");
+
+                Error::SingleStep
+            })?;
+
+            self.wait_for_tracee()?;
+        }
+
+        self.get_tracee_pc()
     }
 
     pub fn continue_execution(&mut self) -> Result<ContinueExecutionOutcome> {
