@@ -107,8 +107,11 @@ fn main() -> std::process::ExitCode {
                 println!("Process exited with code {code}. Quitting...");
                 std::process::exit(0);
             }
-            Ok(ContinueExecutionOutcome::BreakpointHit) => {
-                println!("Hit breakpoint");
+            Ok(ContinueExecutionOutcome::BreakpointHit(address)) => {
+                println!("Hit breakpoint at address {address}");
+            }
+            Ok(ContinueExecutionOutcome::WatchpointHit((address, watchpoint))) => {
+                println!("Hit watchpoint {watchpoint:?} at address {address}");
             }
             Ok(ContinueExecutionOutcome::Other) => {}
             Err(err) => {
