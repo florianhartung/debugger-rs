@@ -26,6 +26,11 @@ struct ProgramArgs {
 enum ReplCommand {
     #[clap(alias = "c")]
     Continue,
+    #[clap(alias = "s")]
+    Step {
+        #[clap(default_value_t = 1)]
+        steps: u32,
+    },
     #[clap(alias = "b")]
     Break {
         #[clap(value_parser=clap::value_parser!(BreakpointLocation))]
@@ -117,6 +122,14 @@ fn main() -> std::process::ExitCode {
             Err(err) => {
                 println!("Got error while continuing execution: {err}");
                 std::process::exit(0);
+            }
+        },
+        ReplCommand::Step { steps } => match debugger.step_instructions(steps) {
+            Ok(new_pc) => {
+                println!("Stepped {steps} instructions, pc now at 0x{new_pc:012x}");
+            }
+            Err(err) => {
+                println!("Encountered error while stepping instructions: {err}");
             }
         },
         ReplCommand::Break { location } => {
