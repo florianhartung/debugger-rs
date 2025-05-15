@@ -9,6 +9,7 @@
 )
 
 #let acs = (
+  "POSIX": "Portable Operating System Interface",
   "ELF": "Executable and Linkable Format",
   "ASLR": "Address Space Layout Randomization",
   "PIE": "Position Independent Executable",
@@ -58,10 +59,18 @@ During this `exec` syscall, the #acr("ASLR") technique is initialized, provided 
 The mappings of memory sections are stored by the kernel and made available at `/proc/<PROC_ID>/maps` for every process by its process id `<PROC_ID>`.
 
 == Signals
-- What are signals?
-- What kinds of signals? Name examples
-- Signal handlers (`wait` syscalls??)
-- Why do we need them?
+Signals are a feature offered by kernels that comply#footnote("Compliance is meant as partial compliance with the specific signal feature as few kernels are actually fully POSIX-compliant") with the #acr("POSIX") #acr("API") to asynchronously send messages and trigger events between processes.
+Commonly known signals include SIGTERM, which terminates a process, SIGSTOP, which stops a process, SIGCONT, which continues a stopped process or SIGTRAP, which signals a breakpoint.
+
+Most signals can be caught and handled by the receiving process with a signal handler.
+This signal handler, which can be user-defined, defines a routine which processes the signal and handles it accordingly.
+If a user-defined signal handler is not present for a specific signal, the default signal handler is invoked.
+The only exceptions for this are SIGKILL and SIGSTOP, which cannot be caught and respectively kill and stop a process.
+
+One usecase for signals in a debugger is controlling the execution of the traced process with signals like SIGSTOP, SIGCONT or SIGKILL.
+Additionally, the signals which target the traced process will be delivered to the debugger first.
+The debugger can then process these signals and decide which to deliver to the traced process.
+This includes SIGTRAP, a signal which is sent when a breakpoint is hit in the executable.
 
 == Debuggers
 // Abstract level
