@@ -16,7 +16,8 @@
   "API": "Application Programming Interface",
   // DWARF is no an acronym
   "REPL": "Read-eval-print loop",
-  "OS": "Operating System"
+  "OS": "Operating System",
+  "CLI": "Command-line Interface",
 )
 #init-acronyms(acs)
 
@@ -127,11 +128,11 @@ Setting breakpoints at arbitrary addresses or function symbols must also be allo
 Watchpoints that trigger on reads or writes at arbitrary addresses are also required.
 
 = Design
-- We split the project into a core debugger and a CLI for modularity and ease of development
-  - CLI design
-  - Core design
-    - Debugger loop
-    - Signal
+We split the debugger project into two parts for better modularity: A core debugger and a #ac("CLI").
+Both are implemented as separate Rust crates with the #ac("CLI") crate depending on the core debugger crate.
+The core crate contains the main logic for the debugger and exposes safe Rust interfaces for usage of the debugger, e.g. attaching to processes or setting breakpoints.
+The #ac("CLI") provides the user interface in form of a #ac("REPL") with formatted user output messages and error reporting.
+
 - Hardware debug registers 
   - Hardware debug registers: method for debugging that required kernel privileges
 - ptrace on a high level: a syscall for monitoring other processes
