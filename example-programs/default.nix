@@ -15,4 +15,5 @@ let
 in
 {
   multiple_prints = mkCApplication "multiple_prints";
+  write_to_global_var = mkCApplication "write_to_global_var";
 }

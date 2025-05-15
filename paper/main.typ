@@ -117,12 +117,14 @@ For #ac("ELF") files, symbols reside in a symbol table and their string names in
 // - Short paragraph on DWARF#footnote("DWARF is not an acronym, instead it's a backcroynm") for stack frame debug information
 
 = Requirements
-// TODO: Unix & Unix-like systems
-// TODO: x86-64 architecture
-1. attaching to processes
-2. setting breakpoints at fixed addresses
-3. reading data from memory, the stack and registers.
-...#td
+As the scope of this debugger implementation is fairly limited, basic requirements for the debugger are defined:
+
+The set of debuggable programs is restricted to x86-64 #ac("ELF") binaries for Unix and Unix-like systems.
+Furthermore, the debugger shall provide the following basic functionalities to run and observe other processes:
+The debugger must be able to attach to running processes and run new processes.
+For inspecting binaries, the debugger must allow the user to list all function symbols contained inside of a given binary.
+Setting breakpoints at arbitrary addresses or function symbols must also be allowed.
+Watchpoints that trigger on reads or writes at arbitrary addresses are also required.
 
 = Design
 - We split the project into a core debugger and a CLI for modularity and ease of development
@@ -195,13 +197,12 @@ In order to ensure that the debugger does not initiate invalid ptrace calls whil
 = Debugger Usage
 - Show 2-3 example programs and the commands used to interact with the debugger
 
-= Conclusion
-#td
-
 = Outlook
 // TODO Missing features
 // TODO What could've been done better
 #td
 
+= Conclusion
+#td
 
 #bibliography("./bib.yml", style: "institute-of-electrical-and-electronics-engineers")
