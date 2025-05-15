@@ -1,5 +1,8 @@
 #import "@preview/acrostiche:0.5.1": *
+#import "@preview/subpar:0.2.2"
 #import "styling.typ": setup
+
+#show figure.caption: it => it + v(0.5em)
 
 #let td = text(red)[TODO]
 
@@ -61,17 +64,17 @@ The mappings of memory sections are stored by the kernel and made available at `
 
 == Signals
 Signals are a feature offered by kernels that comply#footnote("Compliance is meant as partial compliance with the specific signal feature as few kernels are actually fully POSIX-compliant") with the #acr("POSIX") #acr("API") to asynchronously send messages and trigger events between processes.
-Commonly known signals include SIGTERM, which terminates a process, SIGSTOP, which stops a process, SIGCONT, which continues a stopped process or SIGTRAP, which signals a breakpoint.
+Commonly known signals include SIGTERM, which terminates a process, SIGSTOP, which stops a process, SIGCONT, which continues a stopped process or SIGTRAP, which signals a breakpoint @signal.
 
 Most signals can be caught and handled by the receiving process with a signal handler.
 This signal handler, which can be user-defined, defines a routine which processes the signal and handles it accordingly.
 If a user-defined signal handler is not present for a specific signal, the default signal handler is invoked.
-The only exceptions for this are SIGKILL and SIGSTOP, which cannot be caught and respectively kill and stop a process.
+The only exceptions for this are SIGKILL and SIGSTOP, which cannot be caught and respectively kill and stop a process @signal.
 
-One usecase for signals in a debugger is controlling the execution of the traced process with signals like SIGSTOP, SIGCONT or SIGKILL.
+One use case for signals in a debugger is controlling the execution of the traced process with signals like SIGSTOP, SIGCONT or SIGKILL.
 Additionally, the signals which target the traced process will be delivered to the debugger first.
 The debugger can then process these signals and decide which to deliver to the traced process.
-This includes SIGTRAP, a signal which is sent when a breakpoint is hit in the executable.
+This includes SIGTRAP, a signal which is sent when a breakpoint is hit in the executable @signal.
 
 == Debuggers
 // Abstract level
@@ -128,23 +131,67 @@ Setting breakpoints at arbitrary addresses or function symbols must also be allo
 Watchpoints that trigger on reads or writes at arbitrary addresses are also required.
 
 = Design
-We split the debugger project into two parts for better modularity: A core debugger and a #ac("CLI").
+We split the debugger project into two parts for better modularity: a core debugger and a #ac("CLI").
 Both are implemented as separate Rust crates with the #ac("CLI") crate depending on the core debugger crate.
-The core crate contains the main logic for the debugger and exposes safe Rust interfaces for usage of the debugger, e.g. attaching to processes or setting breakpoints.
-The #ac("CLI") provides the user interface in form of a #ac("REPL") with formatted user output messages and error reporting.
 
-- Hardware debug registers 
-  - Hardware debug registers: method for debugging that required kernel privileges
-- ptrace on a high level: a syscall for monitoring other processes
-- Using Hardware debug registers through ptrace
-- We choose ptrace for our debugger design
+The core crate contains the main logic for the debugger and exposes safe Rust interfaces. 
+Its central part is a ```rs Debugger``` Rust struct.
+It represents a currently debugged process and has the same lifetime as this process.
+The ```rust Debugger``` struct is created when attaching to a process.
+A created instance of this struct then exposes several methods to interact with the debugged process, for example setting breakpoints or controlling execution.
+
+The #ac("CLI") crate provides the user interface in form of a #ac("REPL") while ensuring a consistent output format for messages and error reporting.
+It also includes logic for displaying the #acr("REPL") and parsing user input.
+//- Hardware debug registers 
+//  - Hardware debug registers: method for debugging that required kernel privileges
+//- ptrace on a high level: a syscall for monitoring other processes
+//- Using Hardware debug registers through ptrace
+//- We choose ptrace for our debugger design
+
+#subpar.grid(
+  figure(
+    ```c
+    #include <stdio.h>
+    int fn_a() { printf("A\n"); }
+    int fn_b() { printf("B\n"); }
+    int fn_c() { printf("C\n"); }
+    int main() {
+        fn_a();
+        fn_b();
+        fn_c();
+        fn_c();
+    }
+    ```,
+    caption: [Source code]
+  ),
+  figure(
+    ```
+    $ cargo run -- ./<EXECUTABLE>
+    〉break fn_b
+    〉continue
+    A
+    Hit breakpoint at address 94389373546851
+    〉continue
+    B
+    C
+    C
+    Process exited with code 0. Quitting...  
+    ```,
+    caption: [#acr("CLI") usage]
+  ),
+  caption: [Exemplary source code and #acr("CLI") usage for setting a breakpoint and continuing execution],
+  columns: (35fr, 65fr),
+  placement: top,
+  scope: "parent",
+  label: <example_1>
+)
 
 = Implementation
 This section explores the implementation details of the various methods needed to fulfil our requirements.
 
 == Attaching to processes
 When beginning to debug a process, there are typically two scenarios for a debugger, attaching to a process that is already running and creating a new process.
-Both of these have available ptrace #acfp("API") to use with the debugger.
+Both of these have available ptrace #acp("API") to use with the debugger.
 
 Attaching to a running process can be done with either PTRACE_ATTACH or PTRACE_SEIZE.
 When using PTRACE_ATTACH, the attached process is signaled to stop immediately and the debugger should wait until that stop is completed using the `waitpid` syscall.
@@ -165,7 +212,7 @@ Both of these cases are supported in our implementation because they are fundame
 == Setting breakpoints
 There are two main methods to set a breakpoint inside a process that is currently running, software breakpoints and hardware breakpoints.
 
-Software breakpoints use the int3 instruction of the x86-64 instruction set, which triggers an exception inside the processor #cite(<intel-manual>).
+Software breakpoints use the `int3` instruction of the x86-64 instruction set, which triggers an exception inside the processor #cite(<intel-manual>).
 When this exception is encountered, a trap occurs, transferring control to the operating system, which in the case of Unix-like systems will send a SIGTRAP to the running process.
 To set a software breakpoint in the tracee process, the debugger may write the `int3` instruction directly into the executable text segment of the tracee with the PTRACE_POKETEXT #acr("API") #cite(<ptrace>).
 The first byte of the instruction at the breakpoint address can be overwritten with `int3`, which has a one-byte opcode (0xCC). 
@@ -176,14 +223,12 @@ In contrast, hardware breakpoints use the hardware debug registers that are a pa
 These registers make it possible to specify breakpoints at 4 different addresses inside the process.
 However, the breakpoints that are stored in hardware registers are more powerful than software breakpoints, as they can also be triggered on memory reads and writes, as opposed to just execution.
 This may be specified in the debug control register (DR7) for each address individually, which is another debug register. 
-While the direct access of these registers via the `mov` instruction requires a privileged process, they can also be accessed with the PTRACE_WRITE_USER #acr("API") #cite(<ptrace>), that allows the tracer to write fields of the `user` struct#footnote[see glibc source: #link("https://sourceware.org/git/?p=glibc.git;a=blob;f=sysdeps/unix/sysv/linux/x86/sys/user.h"))] in the tracee process, which we use in our implementatio. #cite(<intel-manual>)
+While the direct access of these registers via the `mov` instruction requires a privileged process, they can also be accessed with the PTRACE_WRITE_USER #acr("API") #cite(<ptrace>), that allows the tracer to write fields of the `user` struct#footnote[see glibc source: #link("https://sourceware.org/git/?p=glibc.git;a=blob;f=sysdeps/unix/sysv/linux/x86/sys/user.h")] in the tracee process, which we use in our implementation @intel-manual.
 
 Our debugger implements both types of breakpoint, as they have unique strengths and weaknesses.
 Software breakpoints are used as the primary execution breakpoint mechanism, because there is no limit to the number of software breakpoints.
 Hardware breakpoints, on the other hand, are more flexible in the functionality that they provide, as they can be used to monitor memory access rather than just execution.
 However, the number of hardware breakpoints is limited to 4 by the processor architecture.
-== Reading memory & registers
-- PTRACE_PEEKTEXT, PTRACE_POKEDATA & PTRACE_GETREGS
 
 == Instruction Stepping
 Instruction stepping is vital for the user to have fine grained control over the program execution after hitting a breakpoint.
@@ -195,15 +240,72 @@ This is done internally by the kernel, which sets the trap flag in the x86-64 FL
 The CPU will generate a trap after execution which yields control back to the debugger @intel-manual.
 In order to ensure that the debugger does not initiate invalid ptrace calls while the tracee is still running, a call to `waitpid` is necessary to wait for the tracee to stop. 
 
+#subpar.grid(
+  figure(
+    ```c
+    #include <stdio.h>
+    int a = 5;
+    int before_write() { 
+      printf("before write: %d\n", a); 
+    }
+    int after_write() { 
+      printf("after write: %d\n", a); 
+    }
+    int main() {
+      before_write();
+      a = 15;
+      after_write();
+    }
+    ```,
+    caption: [Source code]
+  ),
+  figure(
+    ```
+    $ cargo run -- ./<EXECUTABLE>
+    〉watch 0x404030 write 1
+    〉c
+    before write: 5
+    Hit watchpoint Data { condition: Write, length: OneByte } at address 0x000000404030
+    〉c
+    after write: 15
+    Process exited with code 0. Quitting...
+    ```,
+    caption: [#acr("CLI") usage]
+  ),
+  caption: [Exemplary source code and #acr("CLI") usage for setting a watchpoint that triggers on writes and execution],
+  columns: (40fr, 60fr),
+  placement: top,
+  scope: "parent",
+  label: <example_2>
+) 
+
 = Debugger Usage
-- Show 2-3 example programs and the commands used to interact with the debugger
+Our debugger #acr("CLI") can be executed through cargo, Rust's official package manager. 
+@example_1 and @example_2 show the source code of C programs and the #acr("REPL") interaction for setting break- and watchpoints and continuing execution. 
+
+In the following, other commands or syntaxes not shown here are presented:
+the `info functions` command is implemented to list all function symbols of a binary.
+The `step <STEPS>` command is used to advance execution by a number `STEPS` of instructions.
+The suffix `hard` can be used with the `break` command for setting hardware instead of software breakpoints, e.g. `break 0x1234 hard`.
+Furthermore, the `watch` command already presented in @example_2 allows to configure it to trigger on writes (`write`) or reads and writes (`read_write`).
+Also the length of the watchpoint may be specified as one of 1, 2, 4 or 8 bytes.
+
 
 = Outlook
-// TODO Missing features
-// TODO What could've been done better
-#td
+Looking forward, there are multiple features that could be additionally implemented to improve the debugging experience for the user.
+One feature that most debuggers provide is disassembly of machine code at the current or any other arbitrary address.
+This in an integral process during debugging in general, because it allows users to inspect machine code while it is being executed.
+
+Another feature is stepping into and over functions, allowing more fine-grained execution control.
+While our debugger currently provides the functionality to step a single instruction, this mechanism is not aware of function boundaries, which is required to step through individual source code statements.
+
+Furthermore, stack unwinding is the process of iterating through call frames to generate a snapshot of the current backtrace, providing insight to the user about the current function call hierarchy.
+This was also not implemented for our debugger due to the high complexity needed to parse stack frame information and unwind the stack based on that. 
 
 = Conclusion
-#td
+In this work, design techniques for debuggers were explored.
+Then, a debugger was implemented, providing basic functionality including breakpoints, watchpoints, listing function symbols and instruction stepping.
+Two examples demonstrate the the debugger's usage.
+While these show that the debugger works for simple examples, various functionalities are still missing for real world usage.
 
 #bibliography("./bib.yml", style: "institute-of-electrical-and-electronics-engineers")

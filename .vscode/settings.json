@@ -1,7 +1,13 @@
 {
     "cSpell.words": [
+        "acrpl",
+        "lldb",
         "pentesting",
+        "SINGLESTEP",
+        "syscall",
         "Tracee",
+        "waitpid",
+        "watchpoint",
         "Watchpoints"
     ]
 }
