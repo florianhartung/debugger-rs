@@ -41,7 +41,6 @@ The debugger is required to implement a certain amount of base features we ident
 
 // Structure overview
 First, we present important fundamentals such as the lifecycle of a process in Unix/Unix-like systems.
-Then we explore the workings and techniques used by popular debuggers through specific examples.
 The next section presents our debugger with its initial requirements, development process and application in a test scenario.
 
 = Fundamentals
@@ -198,7 +197,7 @@ When using PTRACE_ATTACH, the attached process is signaled to stop immediately a
 The user can then set breakpoints or obtain information about the process while it is stopped.
 On the other hand, PTRACE_SEIZE does not stop the attached process and gives the debugger a little more flexibility to do so later with PTRACE_INTERRUPT.
 PTRACE_SEIZE also allows the debugger to use some other functionality, like PTRACE_LISTEN.
-However, in our implementation we use PTRACE_ATTACH because it is sufficient for our use case and the flexibility and complexity of PTRACE_SEIZE is not needed. @ptrace
+However, in our implementation we use PTRACE_ATTACH because it is sufficient for our use case and the flexibility and complexity of PTRACE_SEIZE is not needed @ptrace.
 
 Another use case is the user wanting to debug an executable that is not already running in some process.
 In this case, the debugger can start the executable and initiate the tracing with ptrace.
