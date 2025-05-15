@@ -1,5 +1,6 @@
 # Example programs for testing the debugger
 - multiple_prints: This program prints the letters ABCC in four separate calls.
+- write_to_global_var: This program prints the value of a global integer before and after a write operation on it.
 
 # Structure
 Every program directory contains:
