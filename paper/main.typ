@@ -128,7 +128,7 @@ For #ac("ELF") files, symbols reside in a symbol table and their string names in
 - We choose ptrace for our debugger design
 
 = Implementation
-#td
+This section explores the implementation details of the various methods needed to fulfil our requirements.
 
 == Attaching to processes
 When beginning to debug a process, there are typically two scenarios for a debugger, attaching to a process that is already running and creating a new process.
@@ -174,7 +174,14 @@ However, the number of hardware breakpoints is limited to 4 by the processor arc
 - PTRACE_PEEKTEXT, PTRACE_POKEDATA & PTRACE_GETREGS
 
 == Instruction Stepping
-- PTRACE_SINGLESTEP
+Instruction stepping is vital for the user to have fine grained control over the program execution after hitting a breakpoint.
+This allows the user to advance the execution by a single instruction at a time and inspect the program state after each step.
+
+To implement this, ptrace provides the PTRACE_SINGLESTEP #acr("API") @ptrace. 
+The tracee will be stopped after executing one instruction.
+This is done internally by the kernel, which sets the trap flag in the x86-64 FLAGS status register.
+The CPU will generate a trap after execution which yields control back to the debugger @intel-manual.
+In order to ensure that the debugger does not initiate invalid ptrace calls while the tracee is still running, a call to `waitpid` is necessary to wait for the tracee to stop. 
 
 = Debugger Usage
 - Show 2-3 example programs and the commands used to interact with the debugger
