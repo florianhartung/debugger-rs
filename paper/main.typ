@@ -53,7 +53,7 @@ They contain information such as the program counter, registers, variables, open
 // Process creation
 In Unix and Unix-like systems, there exist multiple methods for creating new processes, however the most common one is the `fork` syscall@fork.
 A process may use this syscall to create an identical clone of themselves.
-Followed by diverging control flow inside this process' program code, the newly created child process can then behave differently form the original parent process.
+Followed by diverging control flow inside this process' program code, the newly created child process can then behave differently from the original parent process.
 Often the child process then calls a syscall of the `exec` family (or the underlying `execve` directly), which replaces its current memory layout with a completely new one from a specified program.
 
 // ASLR & memory mappings
@@ -105,7 +105,7 @@ Even though it is a single syscall, `ptrace` combines various different commands
 // Compilation <-> Loss of information
 When source code is compiled by a compiler to native machine code, a lot of information about the original source code is changed or completely lost.
 Such information may include the names of variables and functions or the layout of stack frames.
-Debugging these kinds of programs is time-consuming and most of the time not feasible in practice.
+Debugging programs missing this information is time-consuming and most of the time not feasible in practice.
 // Motivate debug information
 To solve this problem, object/executable formats include sections where compilers can store additional debug information.
 Debuggers can read this debug information and use to give users meaningful insight into the debugged process.
@@ -189,7 +189,7 @@ It also includes logic for displaying the #acr("REPL") and parsing user input.
 This section explores the implementation details of the various methods needed to fulfil our requirements.
 
 == Attaching to processes
-When beginning to debug a process, there are typically two scenarios for a debugger, attaching to a process that is already running and creating a new process.
+When beginning to debug a process, there are typically two scenarios for a debugger: attaching to a process that is already running and creating a new process.
 Both of these have available ptrace #acp("API") to use with the debugger.
 
 Attaching to a running process can be done with either PTRACE_ATTACH or PTRACE_SEIZE.
@@ -224,7 +224,7 @@ However, the breakpoints that are stored in hardware registers are more powerful
 This may be specified in the debug control register (DR7) for each address individually, which is another debug register. 
 While the direct access of these registers via the `mov` instruction requires a privileged process, they can also be accessed with the PTRACE_WRITE_USER #acr("API") #cite(<ptrace>), that allows the tracer to write fields of the `user` struct#footnote[see glibc source: #link("https://sourceware.org/git/?p=glibc.git;a=blob;f=sysdeps/unix/sysv/linux/x86/sys/user.h")] in the tracee process, which we use in our implementation @intel-manual.
 
-Our debugger implements both types of breakpoint, as they have unique strengths and weaknesses.
+Our debugger implements both types of breakpoints, as they have unique strengths and weaknesses.
 Software breakpoints are used as the primary execution breakpoint mechanism, because there is no limit to the number of software breakpoints.
 Hardware breakpoints, on the other hand, are more flexible in the functionality that they provide, as they can be used to monitor memory access rather than just execution.
 However, the number of hardware breakpoints is limited to 4 by the processor architecture.
@@ -282,7 +282,7 @@ In order to ensure that the debugger does not initiate invalid ptrace calls whil
 Our debugger #acr("CLI") can be executed through cargo, Rust's official package manager. 
 @example_1 and @example_2 show the source code of C programs and the #acr("REPL") interaction for setting break- and watchpoints and continuing execution. 
 
-In the following, other commands or syntaxes not shown here are presented:
+In the following other commands or syntaxes not shown here are presented:
 the `info functions` command is implemented to list all function symbols of a binary.
 The `step <STEPS>` command is used to advance execution by a number `STEPS` of instructions.
 The suffix `hard` can be used with the `break` command for setting hardware instead of software breakpoints, e.g. `break 0x1234 hard`.
@@ -294,6 +294,8 @@ Also the length of the watchpoint may be specified as one of 1, 2, 4 or 8 bytes.
 Looking forward, there are multiple features that could be additionally implemented to improve the debugging experience for the user.
 One feature that most debuggers provide is disassembly of machine code at the current or any other arbitrary address.
 This in an integral process during debugging in general, because it allows users to inspect machine code while it is being executed.
+
+Also users should be able to read and write register contents and memory at arbitrary locations.
 
 Another feature is stepping into and over functions, allowing more fine-grained execution control.
 While our debugger currently provides the functionality to step a single instruction, this mechanism is not aware of function boundaries, which is required to step through individual source code statements.
