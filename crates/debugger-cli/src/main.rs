@@ -61,7 +61,7 @@ enum ReplCommand {
 struct WatchCondition(WatchpointDataCondition);
 
 impl FromStr for WatchCondition {
-    type Err = &'static str;
+    type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
